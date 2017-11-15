@@ -2,10 +2,13 @@
 #define STDAFX_H
 
 #endif // STDAFX_H
+#include <QColorDialog>
+#include <QFileDialog>
+#include <QSettings>
 #include <QTextStream>
+#include <QToolTip>
 #include <QVTKWidget.h>
 #include <vtkAutoInit.h>
-
 VTK_MODULE_INIT(vtkInteractionStyle)
 VTK_MODULE_INIT(vtkRenderingFreeType)
 VTK_MODULE_INIT(vtkRenderingOpenGL2)
@@ -13,13 +16,17 @@ VTK_MODULE_INIT(vtkRenderingOpenGL2)
 // vtk include
 
 #include <vtkActor.h>
-
+#include <vtkAnnotatedCubeActor.h>
+#include <vtkAxesActor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkOrientationMarkerWidget.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPropAssembly.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkSTLReader.h>
 #include <vtkSmartPointer.h>
 #include <vtkTriangleFilter.h>
 // occt include

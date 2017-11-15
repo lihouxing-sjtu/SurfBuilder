@@ -1,21 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <author/>
- <comment/>
- <exportmacro/>
  <class>CustomViewWidget</class>
- <widget name="CustomViewWidget" class="QWidget">
+ <widget class="QWidget" name="CustomViewWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>956</width>
+    <height>572</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>微软雅黑 Light</family>
+    <pointsize>8</pointsize>
+    <weight>3</weight>
+    <italic>false</italic>
+    <bold>false</bold>
+   </font>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">font: 25 8pt &quot;微软雅黑 Light&quot;;</string>
+  </property>
+  <widget class="QPushButton" name="BackGround1Button">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>510</y>
+     <width>50</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>50</width>
+     <height>30</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>50</width>
+     <height>30</height>
+    </size>
+   </property>
+   <property name="toolTip">
+    <string>[Change Background Color1]</string>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(0, 0, 0);
+border-color: rgb(241, 241, 241);
+border-width: 5px;
+border-style: dotted;
+border-radius:2px;</string>
+   </property>
+   <property name="text">
+    <string>Color2</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="BackGround2Button">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>30</y>
+     <width>50</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>50</width>
+     <height>30</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>50</width>
+     <height>30</height>
+    </size>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p style=&quot;background-color:transparent&quot;&gt;[Change Background Color2]&lt;/p&gt;</string>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(0, 0, 0);
+border-color: rgb(241, 241, 241);
+border-width: 5px;
+border-style: dotted;
+border-radius:2px;</string>
+   </property>
+   <property name="text">
+    <string>Color1</string>
+   </property>
+  </widget>
  </widget>
- <pixmapfunction/>
+ <resources/>
  <connections/>
 </ui>

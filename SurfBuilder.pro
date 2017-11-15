@@ -34,6 +34,7 @@ HEADERS += \
     stdafx.h \
     CustomViewWidget.h
 
+RESOURCES +=resource.qrc
 
 FORMS += \
         MainWindow.ui \
@@ -219,3 +220,6 @@ LIBS+=-LC:/Environment/opencascad/instal/OCCT/win64/vc14/lib \
             -lvtkzlib-8.0\
             -lvtkalglib-8.0\
             -lvtkChartsCore-8.0
+
+RESOURCES += \
+    resource.qrc
