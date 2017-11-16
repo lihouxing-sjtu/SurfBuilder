@@ -49,6 +49,8 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
 
 CustomViewWidget::~CustomViewWidget() { delete ui; }
 
+vtkRenderer *CustomViewWidget::GetViewRenderer() { return m_RenderRen; }
+
 void CustomViewWidget::resizeEvent(QResizeEvent *event) {
   int height = this->height();
   int button1Width = ui->BackGround1Button->width();

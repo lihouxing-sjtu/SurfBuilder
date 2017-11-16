@@ -1,7 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
-
+#include "ModelItem.h"
+#include "stdafx.h"
+#include <QComboBox>
 #include <QMainWindow>
+#include <QTreeWidgetItem>
 
 namespace Ui {
 class MainWindow;
@@ -16,11 +19,16 @@ public:
 
 private:
   Ui::MainWindow *ui;
+  QList<ModelItem *> m_ModelList;
+  vtkSmartPointer<vtkRenderer> m_Render;
 
 protected:
   void CollectionOfConnect();
+  void AddModelItem(ModelItem *item);
 protected slots:
   void OnImportSTL();
+  void OnChangeModelColor(QTreeWidgetItem *doubleClickedItem);
+  void OnChangeModelOpacity(QTreeWidgetItem *doubleClickedItem, int column);
 };
 
 #endif // MAINWINDOW_H

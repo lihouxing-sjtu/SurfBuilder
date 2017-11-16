@@ -2,7 +2,9 @@
 #define CUSTOMVIEWWIDGET_H
 #include "stdafx.h"
 #include <QWidget>
-
+VTK_MODULE_INIT(vtkInteractionStyle)
+VTK_MODULE_INIT(vtkRenderingFreeType)
+VTK_MODULE_INIT(vtkRenderingOpenGL2)
 namespace Ui {
 class CustomViewWidget;
 }
@@ -13,6 +15,7 @@ class CustomViewWidget : public QVTKWidget {
 public:
   explicit CustomViewWidget(QWidget *parent = 0);
   ~CustomViewWidget();
+  vtkRenderer *GetViewRenderer();
 
 private:
   Ui::CustomViewWidget *ui;

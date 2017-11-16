@@ -26,13 +26,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         MainWindow.cpp \
-    CustomViewWidget.cpp
+    CustomViewWidget.cpp \
+    ModelItem.cpp
 
 HEADERS += \
         MainWindow.h \
         stdafx.h \
     stdafx.h \
-    CustomViewWidget.h
+    CustomViewWidget.h \
+    ModelItem.h
 
 RESOURCES +=resource.qrc
 

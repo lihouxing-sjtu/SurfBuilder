@@ -169,23 +169,17 @@
             <attribute name="headerVisible">
              <bool>true</bool>
             </attribute>
-            <attribute name="headerDefaultSectionSize">
-             <number>100</number>
+            <attribute name="headerStretchLastSection">
+             <bool>true</bool>
             </attribute>
             <column>
              <property name="text">
               <string>Name</string>
              </property>
-             <property name="textAlignment">
-              <set>AlignCenter</set>
-             </property>
             </column>
             <column>
              <property name="text">
-              <string>Atrribute</string>
-             </property>
-             <property name="textAlignment">
-              <set>AlignCenter</set>
+              <string>Value</string>
              </property>
             </column>
            </widget>
