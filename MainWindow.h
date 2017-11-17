@@ -3,9 +3,11 @@
 #include "ModelItem.h"
 #include "stdafx.h"
 #include <QComboBox>
+#include <QDebug>
 #include <QMainWindow>
+#include <QRadioButton>
+#include <QSignalMapper>
 #include <QTreeWidgetItem>
-
 namespace Ui {
 class MainWindow;
 }
@@ -20,7 +22,13 @@ public:
 private:
   Ui::MainWindow *ui;
   QList<ModelItem *> m_ModelList;
+  QList<QSlider *> m_SliderList;
+  QList<QComboBox *> m_ComboxList;
+  QList<QRadioButton *> m_RadioList;
   vtkSmartPointer<vtkRenderer> m_Render;
+
+  QMenu *m_ModelRightMenu;
+  int m_DeleteItemIndex;
 
 protected:
   void CollectionOfConnect();
@@ -28,7 +36,11 @@ protected:
 protected slots:
   void OnImportSTL();
   void OnChangeModelColor(QTreeWidgetItem *doubleClickedItem);
-  void OnChangeModelOpacity(QTreeWidgetItem *doubleClickedItem, int column);
+  void OnChangeModelOpacity(QWidget *);
+  void OnChangeModelRep(QWidget *);
+  void OnChangeModelVis(QWidget *);
+  void OnModelItemRightClicked(const QPoint &pos);
+  void OnDeleteModel();
 };
 
 #endif // MAINWINDOW_H

@@ -42,6 +42,7 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_RenderRen->GradientBackgroundOn();
   m_RenderRen->SetBackground(bk1);
   m_RenderRen->SetBackground2(bk2);
+  m_RenderRen->UseDepthPeelingOn();
   m_RenderWin->Render();
 
   this->CollectionOfConnect();
