@@ -2,9 +2,10 @@
 #include "ui_CustomViewWidget.h"
 
 CustomViewWidget::CustomViewWidget(QWidget *parent)
-    : QVTKWidget(parent), ui(new Ui::CustomViewWidget) {
+    : QVTKWidget(parent), ui(new Ui::CustomViewWidget),
+      m_isBuildBeizerCurve(0) {
   ui->setupUi(this);
-
+  this->setContextMenuPolicy(Qt::CustomContextMenu);
   m_RenderWin = vtkSmartPointer<vtkRenderWindow>::New();
   m_RenderRen = vtkSmartPointer<vtkRenderer>::New();
   m_Interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -13,7 +14,7 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_RenderWin->AddRenderer(m_RenderRen);
   m_RenderWin->SetInteractor(m_Interactor);
   m_Interactor->SetInteractorStyle(m_TrackBall);
-
+  m_Interactor->RemoveObservers(qPrintable("RightButtonPressEvent"));
   m_AnnotatedCube = vtkSmartPointer<vtkAnnotatedCubeActor>::New();
   m_AxesActor = vtkSmartPointer<vtkAxesActor>::New();
   auto propAssemble = vtkSmartPointer<vtkPropAssembly>::New();
@@ -24,9 +25,12 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_OrientationMarker->SetInteractor(m_Interactor);
   m_OrientationMarker->SetOrientationMarker(propAssemble);
   m_OrientationMarker->EnabledOn();
+  m_OrientationMarker->InteractiveOff();
   this->SetRenderWindow(m_RenderWin);
   m_Interactor->Initialize();
 
+  m_pickedPoints = vtkSmartPointer<vtkPoints>::New();
+  m_pickedPoints->Initialize();
   double bk1[3], bk2[3];
   QSettings settings;
   bk1[0] = settings.value("bk1_red").toDouble();
@@ -51,6 +55,11 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
 CustomViewWidget::~CustomViewWidget() { delete ui; }
 
 vtkRenderer *CustomViewWidget::GetViewRenderer() { return m_RenderRen; }
+
+void CustomViewWidget::GetPickPoints(vtkPoints *output) {
+  output->DeepCopy(m_pickedPoints);
+  m_pickedPoints->Initialize();
+}
 
 void CustomViewWidget::resizeEvent(QResizeEvent *event) {
   int height = this->height();
@@ -81,6 +90,41 @@ void CustomViewWidget::CollectionOfConnect() {
           SLOT(OnChangeBKColor1()));
   connect(ui->BackGround2Button, SIGNAL(clicked(bool)), this,
           SLOT(OnChangeBKColor2()));
+
+  m_RightButtonMenu = new QMenu(this);
+  QAction *focusAction = new QAction(tr("Focus"), m_RightButtonMenu);
+  m_RightButtonMenu->addAction(focusAction);
+  QMenu *curveMenu = new QMenu("Build Beizer Curve", m_RightButtonMenu);
+  QAction *beginBeizerCurveAction = new QAction("Begin", curveMenu);
+  QAction *endBeizerCurveAction = new QAction("End", curveMenu);
+  curveMenu->addAction(beginBeizerCurveAction);
+  curveMenu->addAction(endBeizerCurveAction);
+  m_RightButtonMenu->addMenu(curveMenu);
+  connect(focusAction, SIGNAL(triggered(bool)), this, SLOT(OnFocusView()));
+  connect(this, SIGNAL(customContextMenuRequested(QPoint)), this,
+          SLOT(OnRightButtonMenu(QPoint)));
+  connect(beginBeizerCurveAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnBeginBeizerCurve()));
+  connect(endBeizerCurveAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnEndBeizerCurve()));
+}
+
+void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
+  auto picker = vtkSmartPointer<vtkPropPicker>::New();
+  picker->Pick(inputpt[0], inputpt[1], 0, m_RenderRen);
+  picker->GetPickPosition(outputpt);
+}
+
+void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+  if (m_isBuildBeizerCurve) {
+    double displayPos[2];
+    displayPos[0] = event->pos().x();
+    displayPos[1] = event->pos().y();
+    double pickedPos[3];
+    this->GetPickPoint(displayPos, pickedPos);
+    m_pickedPoints->InsertNextPoint(pickedPos);
+  }
+  QWidget::mouseDoubleClickEvent(event);
 }
 
 void CustomViewWidget::OnChangeBKColor1() {
@@ -116,4 +160,47 @@ void CustomViewWidget::OnChangeBKColor2() {
   settings.setValue("bk2_green", bk2[1]);
   settings.setValue("bk2_blue", bk2[2]);
   SetButtonColor(ui->BackGround2Button, bk2);
+}
+
+void CustomViewWidget::OnRightButtonMenu(QPoint p) {
+  m_cursorPrePos[0] = p.x();
+  m_cursorPrePos[1] = p.y();
+  qDebug() << m_cursorPrePos[0] << "  " << m_cursorPrePos[1] << "  "
+           << mapFromGlobal(QCursor::pos()).x() << "  "
+           << mapFromGlobal(QCursor::pos()).y();
+  m_RightButtonMenu->exec(QCursor::pos());
+}
+
+void CustomViewWidget::OnFocusView() {
+  double prePositon[3];
+  m_RenderRen->GetActiveCamera()->GetFocalPoint(prePositon);
+
+  double focusPoint[3];
+  double displayPos[2];
+  displayPos[0] = m_cursorPrePos[0];
+  displayPos[1] = height() - m_cursorPrePos[0];
+  this->GetPickPoint(displayPos, focusPoint);
+  m_RenderRen->GetActiveCamera()->SetFocalPoint(focusPoint);
+
+  double offset[3];
+  vtkMath::Subtract(focusPoint, prePositon, offset);
+
+  double cameraPosition[3];
+  m_RenderRen->GetActiveCamera()->GetPosition(cameraPosition);
+  vtkMath::Add(cameraPosition, offset, cameraPosition);
+
+  m_RenderRen->GetActiveCamera()->SetPosition(cameraPosition);
+  m_RenderRen->GetActiveCamera()->ParallelProjectionOn();
+  m_RenderRen->ResetCameraClippingRange();
+  m_RenderWin->Render();
+}
+void CustomViewWidget::OnBeginBeizerCurve() {
+  m_isBuildBeizerCurve = true;
+  this->setCursor(Qt::CrossCursor);
+}
+
+void CustomViewWidget::OnEndBeizerCurve() {
+  m_isBuildBeizerCurve = false;
+  this->setCursor(Qt::ArrowCursor);
+  emit this->endBeizerCurve();
 }

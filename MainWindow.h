@@ -26,13 +26,15 @@ private:
   QList<QComboBox *> m_ComboxList;
   QList<QRadioButton *> m_RadioList;
   vtkSmartPointer<vtkRenderer> m_Render;
-
+  vtkSmartPointer<vtkActor> m_PreviewActor;
   QMenu *m_ModelRightMenu;
   int m_DeleteItemIndex;
 
 protected:
   void CollectionOfConnect();
   void AddModelItem(ModelItem *item);
+  void ConvertTopoDS2PolyData(TopoDS_Shape input, vtkPolyData *output);
+
 protected slots:
   void OnImportSTL();
   void OnChangeModelColor(QTreeWidgetItem *doubleClickedItem);
@@ -41,6 +43,7 @@ protected slots:
   void OnChangeModelVis(QWidget *);
   void OnModelItemRightClicked(const QPoint &pos);
   void OnDeleteModel();
+  void OnDrawBeizerCurve();
 };
 
 #endif // MAINWINDOW_H

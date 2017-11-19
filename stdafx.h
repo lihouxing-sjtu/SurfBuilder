@@ -3,32 +3,37 @@
 
 #endif // STDAFX_H
 #include <QColorDialog>
+#include <QDebug>
 #include <QFileDialog>
+#include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QSettings>
 #include <QTextStream>
 #include <QToolTip>
 #include <QVTKWidget.h>
-#include <vtkAutoInit.h>
 // vtk include
-
 #include <vtkActor.h>
 #include <vtkAnnotatedCubeActor.h>
+#include <vtkAutoInit.h>
 #include <vtkAxesActor.h>
+#include <vtkCamera.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPropAssembly.h>
+#include <vtkPropPicker.h>
 #include <vtkProperty.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
 #include <vtkSmartPointer.h>
+#include <vtkSphereWidget.h>
 #include <vtkTriangleFilter.h>
 // occt include
-
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -46,6 +51,7 @@
 #include <GC_MakeSegment.hxx>
 #include <Geom2d_Ellipse.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
+#include <Geom_BezierCurve.hxx>
 #include <Geom_CylindricalSurface.hxx>
 #include <Geom_Plane.hxx>
 #include <Geom_TrimmedCurve.hxx>

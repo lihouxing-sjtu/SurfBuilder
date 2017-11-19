@@ -12,7 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
   ui->ModelTreeWidget->setContextMenuPolicy(Qt::CustomContextMenu);
   m_Render = vtkSmartPointer<vtkRenderer>::New();
   m_Render = ui->ViewWidget->GetViewRenderer();
-
+  m_PreviewActor = vtkSmartPointer<vtkActor>::New();
+  m_Render->AddActor(m_PreviewActor);
   this->CollectionOfConnect();
 }
 
@@ -31,8 +32,12 @@ void MainWindow::CollectionOfConnect() {
   m_ModelRightMenu = new QMenu(this);
   QAction *deleteModelAction = new QAction(tr("Delete"), m_ModelRightMenu);
   m_ModelRightMenu->addAction(deleteModelAction);
+
   connect(deleteModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnDeleteModel()));
+
+  connect(ui->ViewWidget, SIGNAL(endBeizerCurve()), this,
+          SLOT(OnDrawBeizerCurve()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -74,6 +79,7 @@ void MainWindow::AddModelItem(ModelItem *item) {
   QRadioButton *visRadio = new QRadioButton(ui->ModelTreeWidget);
   visRadio->setCheckable(1);
   visRadio->setChecked(1);
+  visRadio->setAutoExclusive(0);
   ui->ModelTreeWidget->setItemWidget(visibilityItem, 1, visRadio);
   m_RadioList.append(visRadio);
   // mapping vis signal
@@ -104,6 +110,17 @@ void MainWindow::AddModelItem(ModelItem *item) {
   ui->ModelTreeWidget->addTopLevelItems(addList);
   m_Render->ResetCamera();
   m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::ConvertTopoDS2PolyData(TopoDS_Shape input,
+                                        vtkPolyData *output) {
+  IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(input);
+
+  auto DS = vtkSmartPointer<IVtkTools_ShapeDataSource>::New();
+  DS->SetShape(aShapeImpl);
+  DS->Update();
+
+  output->DeepCopy(DS->GetOutput());
 }
 
 void MainWindow::OnImportSTL() {
@@ -182,4 +199,28 @@ void MainWindow::OnDeleteModel() {
   m_ModelList.at(m_DeleteItemIndex)->RemoveActor();
   m_ModelList.removeAt(m_DeleteItemIndex);
   m_DeleteItemIndex = -1;
+}
+
+void MainWindow::OnDrawBeizerCurve() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+  int numOfPoints = points->GetNumberOfPoints();
+  TColgp_Array1OfPnt bezierPoints(1, numOfPoints);
+  for (int i = 0; i < numOfPoints; i++) {
+    double pt[3];
+    points->GetPoint(i, pt);
+    gp_Pnt p(pt[0], pt[1], pt[2]);
+    bezierPoints.SetValue(i + 1, p);
+  }
+
+  Handle(Geom_BezierCurve) bezierCurve = new Geom_BezierCurve(bezierPoints);
+
+  TopoDS_Edge aEdge = BRepBuilderAPI_MakeEdge(bezierCurve);
+
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(aEdge, pd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(pd);
+  m_PreviewActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
 }
