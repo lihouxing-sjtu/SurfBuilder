@@ -51,6 +51,8 @@
 #include <GC_MakeSegment.hxx>
 #include <Geom2d_Ellipse.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
+#include <GeomAPI_Interpolate.hxx>
+#include <Geom_BSplineCurve.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_CylindricalSurface.hxx>
 #include <Geom_Plane.hxx>
@@ -61,6 +63,7 @@
 #include <IVtkVTK_ShapeData.hxx>
 #include <IVtk_IShapeData.hxx>
 #include <IVtk_IShapeMesher.hxx>
+#include <TColgp_HArray1OfPnt.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
@@ -68,3 +71,4 @@
 #include <TopoDS_Wire.hxx>
 #include <gp_Ax1.hxx>
 #include <gp_Trsf.hxx>
+#include <handleapi.h>

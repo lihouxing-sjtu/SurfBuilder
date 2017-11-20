@@ -205,17 +205,21 @@ void MainWindow::OnDrawBeizerCurve() {
   auto points = vtkSmartPointer<vtkPoints>::New();
   ui->ViewWidget->GetPickPoints(points);
   int numOfPoints = points->GetNumberOfPoints();
-  TColgp_Array1OfPnt bezierPoints(1, numOfPoints);
+
+  Handle_TColgp_HArray1OfPnt bsplinePoints =
+      new TColgp_HArray1OfPnt(1, numOfPoints);
   for (int i = 0; i < numOfPoints; i++) {
     double pt[3];
     points->GetPoint(i, pt);
     gp_Pnt p(pt[0], pt[1], pt[2]);
-    bezierPoints.SetValue(i + 1, p);
+    bsplinePoints->SetValue(i + 1, p);
   }
+  GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
+  interp.Perform();
+  Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
+  // Handle(Geom_BezierCurve) bezierCurve = new Geom_BezierCurve(bezierPoints);
 
-  Handle(Geom_BezierCurve) bezierCurve = new Geom_BezierCurve(bezierPoints);
-
-  TopoDS_Edge aEdge = BRepBuilderAPI_MakeEdge(bezierCurve);
+  TopoDS_Edge aEdge = BRepBuilderAPI_MakeEdge(bsplineCurve);
 
   auto pd = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(aEdge, pd);

@@ -119,7 +119,7 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   if (m_isBuildBeizerCurve) {
     double displayPos[2];
     displayPos[0] = event->pos().x();
-    displayPos[1] = event->pos().y();
+    displayPos[1] = height() - event->pos().y();
     double pickedPos[3];
     this->GetPickPoint(displayPos, pickedPos);
     m_pickedPoints->InsertNextPoint(pickedPos);
@@ -178,7 +178,7 @@ void CustomViewWidget::OnFocusView() {
   double focusPoint[3];
   double displayPos[2];
   displayPos[0] = m_cursorPrePos[0];
-  displayPos[1] = height() - m_cursorPrePos[0];
+  displayPos[1] = height() - m_cursorPrePos[1];
   this->GetPickPoint(displayPos, focusPoint);
   m_RenderRen->GetActiveCamera()->SetFocalPoint(focusPoint);
 
