@@ -8,7 +8,7 @@ VTK_MODULE_INIT(vtkRenderingOpenGL2)
 namespace Ui {
 class CustomViewWidget;
 }
-
+enum pickState { None, BSplineCurve, SelectLoop };
 class CustomViewWidget : public QVTKWidget {
   Q_OBJECT
 
@@ -31,7 +31,7 @@ private:
   vtkSmartPointer<vtkAxesActor> m_AxesActor;
   vtkSmartPointer<vtkPoints> m_pickedPoints;
   int m_cursorPrePos[2];
-  bool m_isBuildBeizerCurve;
+  int m_pickState;
 
 protected:
   virtual void resizeEvent(QResizeEvent *event);
@@ -40,14 +40,17 @@ protected:
   void GetPickPoint(double inputpt[2], double outputpt[3]);
   virtual void mouseDoubleClickEvent(QMouseEvent *event);
 signals:
-  void endBeizerCurve();
+  void endBSplineCurve();
+  void endSelectLoop();
 protected slots:
   void OnChangeBKColor1();
   void OnChangeBKColor2();
   void OnRightButtonMenu(QPoint);
   void OnFocusView();
-  void OnBeginBeizerCurve();
-  void OnEndBeizerCurve();
+  void OnBeginBSplineCurve();
+  void OnEndBSplineCurve();
+  void OnBeginSelectLoop();
+  void OnEndSelectLoop();
 };
 
 #endif // CUSTOMVIEWWIDGET_H

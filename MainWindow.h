@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <QRadioButton>
 #include <QSignalMapper>
+#include <QSpinBox>
 #include <QTreeWidgetItem>
 namespace Ui {
 class MainWindow;
@@ -43,7 +44,8 @@ protected slots:
   void OnChangeModelVis(QWidget *);
   void OnModelItemRightClicked(const QPoint &pos);
   void OnDeleteModel();
-  void OnDrawBeizerCurve();
+  void OnDrawBSplineCurve();
+  void OnSelectPolyData();
 };
 
 #endif // MAINWINDOW_H

@@ -36,8 +36,10 @@ void MainWindow::CollectionOfConnect() {
   connect(deleteModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnDeleteModel()));
 
-  connect(ui->ViewWidget, SIGNAL(endBeizerCurve()), this,
-          SLOT(OnDrawBeizerCurve()));
+  connect(ui->ViewWidget, SIGNAL(endBSplineCurve()), this,
+          SLOT(OnDrawBSplineCurve()));
+  connect(ui->ViewWidget, SIGNAL(endSelectLoop()), this,
+          SLOT(OnSelectPolyData()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -98,6 +100,21 @@ void MainWindow::AddModelItem(ModelItem *item) {
   repBox->addItem("frame");
   m_ComboxList.append(repBox);
   ui->ModelTreeWidget->setItemWidget(repItem, 1, repBox);
+
+  // boolean item
+  QTreeWidgetItem *boolItem = new QTreeWidgetItem(topItem);
+  boolItem->setFlags(Qt::ItemIsEnabled);
+  QComboBox *typeCombox = new QComboBox(this);
+  typeCombox->addItem(tr("No Opotion"));
+  typeCombox->addItem(tr("Common"));
+  typeCombox->addItem(tr("Cut"));
+  typeCombox->addItem(tr("Fuse"));
+  typeCombox->addItem(tr("Section"));
+  QSpinBox *serialNum = new QSpinBox(this);
+  serialNum->setRange(-1, 99);
+  serialNum->setValue(-1);
+  ui->ModelTreeWidget->setItemWidget(boolItem, 1, typeCombox);
+  ui->ModelTreeWidget->setItemWidget(boolItem, 0, serialNum);
   // mapping rep signal
   QSignalMapper *repMapper = new QSignalMapper(ui->ModelTreeWidget);
   repMapper->setMapping(repBox, repBox);
@@ -201,7 +218,7 @@ void MainWindow::OnDeleteModel() {
   m_DeleteItemIndex = -1;
 }
 
-void MainWindow::OnDrawBeizerCurve() {
+void MainWindow::OnDrawBSplineCurve() {
   auto points = vtkSmartPointer<vtkPoints>::New();
   ui->ViewWidget->GetPickPoints(points);
   int numOfPoints = points->GetNumberOfPoints();
@@ -223,8 +240,56 @@ void MainWindow::OnDrawBeizerCurve() {
 
   auto pd = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(aEdge, pd);
-  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputData(pd);
-  m_PreviewActor->SetMapper(mapper);
-  m_Render->GetRenderWindow()->Render();
+  QTime time = QTime::currentTime();
+  QString modelName = "BSpline-" + QString::number(time.hour()) + "-" +
+                      QString::number(time.minute()) + "-" +
+                      QString::number(time.second());
+  ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+  m_ModelList.append(item);
+
+  this->AddModelItem(m_ModelList.last());
+}
+
+void MainWindow::OnSelectPolyData() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+  int numOfPoints = points->GetNumberOfPoints();
+
+  Handle_TColgp_HArray1OfPnt bsplinePoints =
+      new TColgp_HArray1OfPnt(1, numOfPoints + 1);
+  for (int i = 0; i < numOfPoints; i++) {
+    double pt[3];
+    points->GetPoint(i, pt);
+    gp_Pnt p(pt[0], pt[1], pt[2]);
+    bsplinePoints->SetValue(i + 1, p);
+  }
+  double pt[3];
+  points->GetPoint(0, pt);
+  gp_Pnt p(pt[0], pt[1], pt[2]);
+  bsplinePoints->SetValue(numOfPoints + 1, p);
+  GeomAPI_Interpolate interp(bsplinePoints, Standard_False,
+                             Precision::Approximation());
+  interp.Perform();
+  Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
+
+  TopoDS_Edge aEdge = BRepBuilderAPI_MakeEdge(bsplineCurve);
+
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(aEdge, pd);
+
+  auto selectPolydata = vtkSmartPointer<vtkSelectPolyData>::New();
+  selectPolydata->SetInputData(m_ModelList.first()->GetModelData());
+  selectPolydata->SetLoop(pd->GetPoints());
+  selectPolydata->SetSelectionModeToSmallestRegion();
+  selectPolydata->Update();
+
+  QTime time = QTime::currentTime();
+  QString modelName = "SelectData-" + QString::number(time.hour()) + "-" +
+                      QString::number(time.minute()) + "-" +
+                      QString::number(time.second());
+  ModelItem *item =
+      new ModelItem(this, m_Render, modelName, selectPolydata->GetOutput());
+  m_ModelList.append(item);
+
+  this->AddModelItem(m_ModelList.last());
 }

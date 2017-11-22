@@ -10,6 +10,7 @@
 #include <QMouseEvent>
 #include <QSettings>
 #include <QTextStream>
+#include <QTime>
 #include <QToolTip>
 #include <QVTKWidget.h>
 // vtk include
@@ -23,6 +24,7 @@
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkPropAssembly.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
@@ -30,6 +32,7 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
+#include <vtkSelectPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkSphereWidget.h>
 #include <vtkTriangleFilter.h>

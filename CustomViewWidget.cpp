@@ -3,7 +3,7 @@
 
 CustomViewWidget::CustomViewWidget(QWidget *parent)
     : QVTKWidget(parent), ui(new Ui::CustomViewWidget),
-      m_isBuildBeizerCurve(0) {
+      m_pickState(pickState::None) {
   ui->setupUi(this);
   this->setContextMenuPolicy(Qt::CustomContextMenu);
   m_RenderWin = vtkSmartPointer<vtkRenderWindow>::New();
@@ -95,18 +95,30 @@ void CustomViewWidget::CollectionOfConnect() {
   QAction *focusAction = new QAction(tr("Focus"), m_RightButtonMenu);
   m_RightButtonMenu->addAction(focusAction);
   QMenu *curveMenu = new QMenu("Build Beizer Curve", m_RightButtonMenu);
-  QAction *beginBeizerCurveAction = new QAction("Begin", curveMenu);
-  QAction *endBeizerCurveAction = new QAction("End", curveMenu);
-  curveMenu->addAction(beginBeizerCurveAction);
-  curveMenu->addAction(endBeizerCurveAction);
+  QAction *beginBSplineCurveAction = new QAction("Begin", curveMenu);
+  QAction *endBSplineCurveAction = new QAction("End", curveMenu);
+  curveMenu->addAction(beginBSplineCurveAction);
+  curveMenu->addAction(endBSplineCurveAction);
   m_RightButtonMenu->addMenu(curveMenu);
   connect(focusAction, SIGNAL(triggered(bool)), this, SLOT(OnFocusView()));
   connect(this, SIGNAL(customContextMenuRequested(QPoint)), this,
           SLOT(OnRightButtonMenu(QPoint)));
-  connect(beginBeizerCurveAction, SIGNAL(triggered(bool)), this,
-          SLOT(OnBeginBeizerCurve()));
-  connect(endBeizerCurveAction, SIGNAL(triggered(bool)), this,
-          SLOT(OnEndBeizerCurve()));
+  connect(beginBSplineCurveAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnBeginBSplineCurve()));
+  connect(endBSplineCurveAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnEndBSplineCurve()));
+
+  QMenu *selectRegion = new QMenu("Select Region", m_RightButtonMenu);
+  QAction *startLoopAction = new QAction("Begin", selectRegion);
+  QAction *endLoopAction = new QAction("End", selectRegion);
+  selectRegion->addAction(startLoopAction);
+  selectRegion->addAction(endLoopAction);
+  m_RightButtonMenu->addMenu(selectRegion);
+
+  connect(startLoopAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnBeginSelectLoop()));
+  connect(endLoopAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnEndSelectLoop()));
 }
 
 void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
@@ -116,14 +128,16 @@ void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
 }
 
 void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
-  if (m_isBuildBeizerCurve) {
-    double displayPos[2];
-    displayPos[0] = event->pos().x();
-    displayPos[1] = height() - event->pos().y();
-    double pickedPos[3];
-    this->GetPickPoint(displayPos, pickedPos);
-    m_pickedPoints->InsertNextPoint(pickedPos);
+  if (m_pickState == None) {
+    QWidget::mouseDoubleClickEvent(event);
+    return;
   }
+  double displayPos[2];
+  displayPos[0] = event->pos().x();
+  displayPos[1] = height() - event->pos().y();
+  double pickedPos[3];
+  this->GetPickPoint(displayPos, pickedPos);
+  m_pickedPoints->InsertNextPoint(pickedPos);
   QWidget::mouseDoubleClickEvent(event);
 }
 
@@ -194,13 +208,32 @@ void CustomViewWidget::OnFocusView() {
   m_RenderRen->ResetCameraClippingRange();
   m_RenderWin->Render();
 }
-void CustomViewWidget::OnBeginBeizerCurve() {
-  m_isBuildBeizerCurve = true;
+void CustomViewWidget::OnBeginBSplineCurve() {
+  if (m_pickState != None)
+    return;
+  m_pickState = BSplineCurve;
   this->setCursor(Qt::CrossCursor);
 }
 
-void CustomViewWidget::OnEndBeizerCurve() {
-  m_isBuildBeizerCurve = false;
+void CustomViewWidget::OnEndBSplineCurve() {
+  if (m_pickState != BSplineCurve)
+    return;
+  m_pickState = None;
   this->setCursor(Qt::ArrowCursor);
-  emit this->endBeizerCurve();
+  emit this->endBSplineCurve();
+}
+
+void CustomViewWidget::OnBeginSelectLoop() {
+  if (m_pickState != None)
+    return;
+  m_pickState = SelectLoop;
+  this->setCursor(Qt::CrossCursor);
+}
+
+void CustomViewWidget::OnEndSelectLoop() {
+  if (m_pickState != SelectLoop)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  emit this->endSelectLoop();
 }
