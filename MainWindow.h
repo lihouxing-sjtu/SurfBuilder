@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 #include "ModelItem.h"
+#include "NormalWidget.h"
 #include "stdafx.h"
 #include <QComboBox>
 #include <QDebug>
@@ -29,7 +30,8 @@ private:
   vtkSmartPointer<vtkRenderer> m_Render;
   vtkSmartPointer<vtkActor> m_PreviewActor;
   QMenu *m_ModelRightMenu;
-  int m_DeleteItemIndex;
+  int m_SelectItemIndex;
+  NormalWidget *m_StrechWidget;
 
 protected:
   void CollectionOfConnect();
@@ -46,6 +48,10 @@ protected slots:
   void OnDeleteModel();
   void OnDrawBSplineCurve();
   void OnSelectPolyData();
+  void OnStrechTopo_Shape();
+  void OnStartPickBasePoint();
+  void OnEndPickBasePoint();
+  void OnStrechModel();
 };
 
 #endif // MAINWINDOW_H

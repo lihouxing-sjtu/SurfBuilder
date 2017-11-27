@@ -27,20 +27,23 @@ SOURCES += \
         main.cpp \
         MainWindow.cpp \
     CustomViewWidget.cpp \
-    ModelItem.cpp
+    ModelItem.cpp \
+    NormalWidget.cpp
 
 HEADERS += \
         MainWindow.h \
         stdafx.h \
     stdafx.h \
     CustomViewWidget.h \
-    ModelItem.h
+    ModelItem.h \
+    NormalWidget.h
 
 RESOURCES +=resource.qrc
 
 FORMS += \
         MainWindow.ui \
-    CustomViewWidget.ui
+    CustomViewWidget.ui \
+    NormalWidget.ui
 
 INCLUDEPATH+=C:\Environment\VTK\Install\Vs2015-qt590-vtk801\include\vtk-8.0       \
                             C:\Environment\opencascad\instal\OCCT\inc

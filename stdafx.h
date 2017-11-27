@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QSettings>
+#include <QSpinBox>
 #include <QTextStream>
 #include <QTime>
 #include <QToolTip>
@@ -16,6 +17,7 @@
 // vtk include
 #include <vtkActor.h>
 #include <vtkAnnotatedCubeActor.h>
+#include <vtkArrowSource.h>
 #include <vtkAutoInit.h>
 #include <vtkAxesActor.h>
 #include <vtkCamera.h>
@@ -23,6 +25,7 @@
 #include <vtkMath.h>
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkPolyData.h>
+#include <vtkPolyDataConnectivityFilter.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkPropAssembly.h>
@@ -32,9 +35,14 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
+#include <vtkSTLWriter.h>
 #include <vtkSelectPolyData.h>
 #include <vtkSmartPointer.h>
+#include <vtkSmoothPolyDataFilter.h>
+#include <vtkSphereSource.h>
 #include <vtkSphereWidget.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
 // occt include
 #include <BRepAlgoAPI_Fuse.hxx>
@@ -47,6 +55,7 @@
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <GCE2d_MakeSegment.hxx>
 #include <GC_MakeArcOfCircle.hxx>
@@ -66,11 +75,14 @@
 #include <IVtkVTK_ShapeData.hxx>
 #include <IVtk_IShapeData.hxx>
 #include <IVtk_IShapeMesher.hxx>
+#include <StlAPI_Reader.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
+#include <TopoDS_HShape.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_TShape.hxx>
 #include <TopoDS_Wire.hxx>
 #include <gp_Ax1.hxx>
 #include <gp_Trsf.hxx>

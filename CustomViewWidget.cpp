@@ -3,7 +3,7 @@
 
 CustomViewWidget::CustomViewWidget(QWidget *parent)
     : QVTKWidget(parent), ui(new Ui::CustomViewWidget),
-      m_pickState(pickState::None) {
+      m_pickState(pickState::None), m_keyState(Nokey) {
   ui->setupUi(this);
   this->setContextMenuPolicy(Qt::CustomContextMenu);
   m_RenderWin = vtkSmartPointer<vtkRenderWindow>::New();
@@ -28,7 +28,7 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_OrientationMarker->InteractiveOff();
   this->SetRenderWindow(m_RenderWin);
   m_Interactor->Initialize();
-
+  this->setMouseTracking(false);
   m_pickedPoints = vtkSmartPointer<vtkPoints>::New();
   m_pickedPoints->Initialize();
   double bk1[3], bk2[3];
@@ -59,6 +59,18 @@ vtkRenderer *CustomViewWidget::GetViewRenderer() { return m_RenderRen; }
 void CustomViewWidget::GetPickPoints(vtkPoints *output) {
   output->DeepCopy(m_pickedPoints);
   m_pickedPoints->Initialize();
+  foreach (vtkActor *var, m_pickSpheres) { m_RenderRen->RemoveActor(var); }
+  m_pickSpheres.clear();
+}
+
+void CustomViewWidget::SetPickPoint() {
+  if (m_pickState != None) {
+    QMessageBox::information(this, tr("Errir"),
+                             tr("Please finish the pick firstly!"));
+    return;
+  }
+  m_pickState = PickPoint;
+  this->setCursor(Qt::CrossCursor);
 }
 
 void CustomViewWidget::resizeEvent(QResizeEvent *event) {
@@ -125,6 +137,7 @@ void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
   auto picker = vtkSmartPointer<vtkPropPicker>::New();
   picker->Pick(inputpt[0], inputpt[1], 0, m_RenderRen);
   picker->GetPickPosition(outputpt);
+  m_RenderWin->Render();
 }
 
 void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
@@ -138,7 +151,45 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   double pickedPos[3];
   this->GetPickPoint(displayPos, pickedPos);
   m_pickedPoints->InsertNextPoint(pickedPos);
+  auto sphere = vtkSmartPointer<vtkSphereSource>::New();
+  sphere->SetCenter(pickedPos);
+  sphere->SetRadius(1);
+  sphere->SetPhiResolution(20);
+  sphere->Update();
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(sphere->GetOutput());
+  auto actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+  actor->GetProperty()->SetColor(0.3, 0.5, 0.8);
+  m_RenderRen->AddActor(actor);
+  m_pickSpheres.append(actor);
   QWidget::mouseDoubleClickEvent(event);
+  if (m_pickState == PickPoint)
+    OnEndPickPoint();
+}
+
+void CustomViewWidget::keyPressEvent(QKeyEvent *event) {
+  if (m_keyState != Nokey) {
+    QWidget::keyPressEvent(event);
+    return;
+  }
+  if (event->key() == Qt::Key_F1)
+    m_keyState = F1;
+  QWidget::keyPressEvent(event);
+}
+
+void CustomViewWidget::keyReleaseEvent(QKeyEvent *event) {
+  if (event->key() == Qt::Key_F1) {
+    m_keyState = Nokey;
+    QWidget::keyReleaseEvent(event);
+  }
+  QWidget::keyReleaseEvent(event);
+}
+
+void CustomViewWidget::mouseMoveEvent(QMouseEvent *event) {
+  if (m_keyState == F1) {
+    QVTKWidget::mouseMoveEvent(event);
+  }
 }
 
 void CustomViewWidget::OnChangeBKColor1() {
@@ -236,4 +287,12 @@ void CustomViewWidget::OnEndSelectLoop() {
   m_pickState = None;
   this->setCursor(Qt::ArrowCursor);
   emit this->endSelectLoop();
+}
+
+void CustomViewWidget::OnEndPickPoint() {
+  if (m_pickState != PickPoint)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  emit this->endPickPoint();
 }

@@ -2,7 +2,7 @@
 #include "ui_MainWindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), m_DeleteItemIndex(-1) {
+    : QMainWindow(parent), ui(new Ui::MainWindow), m_SelectItemIndex(-1) {
   ui->setupUi(this);
 
   int widthOfTree = ui->ModelTreeWidget->width();
@@ -14,6 +14,9 @@ MainWindow::MainWindow(QWidget *parent)
   m_Render = ui->ViewWidget->GetViewRenderer();
   m_PreviewActor = vtkSmartPointer<vtkActor>::New();
   m_Render->AddActor(m_PreviewActor);
+
+  m_StrechWidget = new NormalWidget(0, m_Render);
+  m_StrechWidget->hide();
   this->CollectionOfConnect();
 }
 
@@ -31,15 +34,28 @@ void MainWindow::CollectionOfConnect() {
 
   m_ModelRightMenu = new QMenu(this);
   QAction *deleteModelAction = new QAction(tr("Delete"), m_ModelRightMenu);
+  QAction *strechModelAction = new QAction(tr("Strech"), m_ModelRightMenu);
   m_ModelRightMenu->addAction(deleteModelAction);
-
+  m_ModelRightMenu->addAction(strechModelAction);
   connect(deleteModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnDeleteModel()));
-
+  connect(strechModelAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnStrechTopo_Shape()));
   connect(ui->ViewWidget, SIGNAL(endBSplineCurve()), this,
           SLOT(OnDrawBSplineCurve()));
   connect(ui->ViewWidget, SIGNAL(endSelectLoop()), this,
           SLOT(OnSelectPolyData()));
+  connect(ui->ViewWidget, SIGNAL(endPickPoint()), this,
+          SLOT(OnEndPickBasePoint()));
+  //  double pt1[3] = {-154.15, -117.03, 1122.21};
+  //  double pt2[3] = {-171.63, -109.71, 932.34};
+  //  double dis;
+  //  dis = sqrt(vtkMath::Distance2BetweenPoints(pt1, pt2));
+  //  qDebug() << dis;
+  connect(m_StrechWidget, SIGNAL(pickBasePoint()), this,
+          SLOT(OnStartPickBasePoint()));
+  connect(m_StrechWidget, SIGNAL(strechDirection()), this,
+          SLOT(OnStrechModel()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -203,19 +219,19 @@ void MainWindow::OnModelItemRightClicked(const QPoint &pos) {
       ui->ModelTreeWidget->itemAt(pos));
   if (index == -1)
     return;
-  m_DeleteItemIndex = index;
+  m_SelectItemIndex = index;
   m_ModelRightMenu->exec(QCursor::pos());
 }
 
 void MainWindow::OnDeleteModel() {
-  ui->ModelTreeWidget->takeTopLevelItem(m_DeleteItemIndex);
+  ui->ModelTreeWidget->takeTopLevelItem(m_SelectItemIndex);
 
-  m_SliderList.removeAt(m_DeleteItemIndex);
-  m_ComboxList.removeAt(m_DeleteItemIndex);
-  m_RadioList.removeAt(m_DeleteItemIndex);
-  m_ModelList.at(m_DeleteItemIndex)->RemoveActor();
-  m_ModelList.removeAt(m_DeleteItemIndex);
-  m_DeleteItemIndex = -1;
+  m_SliderList.removeAt(m_SelectItemIndex);
+  m_ComboxList.removeAt(m_SelectItemIndex);
+  m_RadioList.removeAt(m_SelectItemIndex);
+  m_ModelList.at(m_SelectItemIndex)->RemoveActor();
+  m_ModelList.removeAt(m_SelectItemIndex);
+  m_SelectItemIndex = -1;
 }
 
 void MainWindow::OnDrawBSplineCurve() {
@@ -246,7 +262,7 @@ void MainWindow::OnDrawBSplineCurve() {
                       QString::number(time.second());
   ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
   m_ModelList.append(item);
-
+  item->SetTopoDS_Shape(aEdge);
   this->AddModelItem(m_ModelList.last());
 }
 
@@ -256,8 +272,8 @@ void MainWindow::OnSelectPolyData() {
   int numOfPoints = points->GetNumberOfPoints();
 
   Handle_TColgp_HArray1OfPnt bsplinePoints =
-      new TColgp_HArray1OfPnt(1, numOfPoints + 1);
-  for (int i = 0; i < numOfPoints; i++) {
+      new TColgp_HArray1OfPnt(1, numOfPoints);
+  for (int i = 0; i < numOfPoints - 1; i++) {
     double pt[3];
     points->GetPoint(i, pt);
     gp_Pnt p(pt[0], pt[1], pt[2]);
@@ -266,7 +282,7 @@ void MainWindow::OnSelectPolyData() {
   double pt[3];
   points->GetPoint(0, pt);
   gp_Pnt p(pt[0], pt[1], pt[2]);
-  bsplinePoints->SetValue(numOfPoints + 1, p);
+  bsplinePoints->SetValue(numOfPoints, p);
   GeomAPI_Interpolate interp(bsplinePoints, Standard_False,
                              Precision::Approximation());
   interp.Perform();
@@ -283,13 +299,86 @@ void MainWindow::OnSelectPolyData() {
   selectPolydata->SetSelectionModeToSmallestRegion();
   selectPolydata->Update();
 
+  auto connectFilter = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();
+  connectFilter->SetInputData(selectPolydata->GetOutput());
+  connectFilter->SetExtractionModeToClosestPointRegion();
+  connectFilter->SetClosestPoint(points->GetPoint(numOfPoints - 1));
+  connectFilter->Update();
+
+  auto triangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
+  triangleFilter->SetInputData(connectFilter->GetOutput());
+  triangleFilter->Update();
+
   QTime time = QTime::currentTime();
   QString modelName = "SelectData-" + QString::number(time.hour()) + "-" +
                       QString::number(time.minute()) + "-" +
                       QString::number(time.second());
+  auto stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
+  stlWriter->SetInputData(triangleFilter->GetOutput());
+  stlWriter->SetFileName(qPrintable(modelName.append(".stl")));
+  stlWriter->Write();
+  TopoDS_Shape ds;
+  Standard_CString stlPath = qPrintable(modelName);
+  StlAPI_Reader stlReader;
+  if (stlReader.Read(ds, stlPath))
+    qDebug() << "y";
+  if (ds.IsNull())
+    qDebug() << "s";
   ModelItem *item =
-      new ModelItem(this, m_Render, modelName, selectPolydata->GetOutput());
+      new ModelItem(this, m_Render, modelName, connectFilter->GetOutput());
+  item->SetTopoDS_Shape(ds);
   m_ModelList.append(item);
 
+  this->AddModelItem(m_ModelList.last());
+}
+
+void MainWindow::OnStrechTopo_Shape() {
+  if (m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape()->Shape().IsNull())
+    return;
+  m_StrechWidget->show();
+}
+
+void MainWindow::OnStartPickBasePoint() { ui->ViewWidget->SetPickPoint(); }
+
+void MainWindow::OnEndPickBasePoint() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+  double location[3], direction[3];
+
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(direction);
+  vtkMath::MultiplyScalar(direction, -1);
+  points->GetPoint(0, location);
+  m_StrechWidget->SetPoints(direction, location);
+}
+
+void MainWindow::OnStrechModel() {
+  if (m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape()->Shape().IsNull())
+    return;
+  qDebug() << "strech 0";
+  double direction[3], distance;
+  distance = m_StrechWidget->GetDirectionAndDistance(direction);
+  vtkMath::Normalize(direction);
+  gp_Dir dir(direction[0], direction[1], direction[2]);
+  qDebug() << direction[0] << "  " << direction[1] << "  " << direction[2];
+  gp_Vec v = dir;
+  v.Scale(distance);
+  qDebug() << v.X() << "  " << v.Y() << "  " << v.Z();
+  qDebug() << "strech 1";
+  Handle(TopoDS_HShape) hshape =
+      m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape();
+  const TopoDS_Shape face = hshape->Shape();
+  qDebug() << "strech 2";
+  const TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
+  qDebug() << "strech 3";
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(solid, pd);
+  qDebug() << "strech 4";
+  QTime time = QTime::currentTime();
+  QString modelName = "Strech-" + QString::number(time.hour()) + "-" +
+                      QString::number(time.minute()) + "-" +
+                      QString::number(time.second());
+  ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+  m_ModelList.append(item);
+  item->SetTopoDS_Shape(solid);
   this->AddModelItem(m_ModelList.last());
 }

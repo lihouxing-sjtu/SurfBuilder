@@ -21,6 +21,8 @@ ModelItem::ModelItem(QObject *parent, vtkRenderer *ren, QString name,
   }
   this->SetColor(_color);
   this->RenderWin();
+
+  m_DS = new TopoDS_HShape();
 }
 void ModelItem::SetModelName(QString name) { m_ModelName = name; }
 
@@ -89,5 +91,9 @@ void ModelItem::RemoveActor() {
   m_Renderer->RemoveActor(m_ModelActor);
   this->RenderWin();
 }
+
+void ModelItem::SetTopoDS_Shape(const TopoDS_Shape &ds) { m_DS->Shape(ds); }
+
+Handle(TopoDS_HShape) ModelItem::GetTopoDS_Shape() { return m_DS; }
 
 void ModelItem::RenderWin() { m_Renderer->GetRenderWindow()->Render(); }
