@@ -56,7 +56,7 @@
 #include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
-#include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepTools_ReShape.hxx>
 #include <GCE2d_MakeSegment.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 #include <GC_MakeCircle.hxx>
@@ -64,7 +64,13 @@
 #include <Geom2d_Ellipse.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <GeomAPI_Interpolate.hxx>
+#include <GeomConvert.hxx>
+#include <GeomPlate_BuildPlateSurface.hxx>
+#include <GeomPlate_MakeApprox.hxx>
+#include <GeomPlate_PointConstraint.hxx>
+#include <GeomPlate_Surface.hxx>
 #include <Geom_BSplineCurve.hxx>
+#include <Geom_BSplineSurface.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_CylindricalSurface.hxx>
 #include <Geom_Plane.hxx>
@@ -75,6 +81,7 @@
 #include <IVtkVTK_ShapeData.hxx>
 #include <IVtk_IShapeData.hxx>
 #include <IVtk_IShapeMesher.hxx>
+#include <ShapeUpgrade_RemoveInternalWires.hxx>
 #include <StlAPI_Reader.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TopExp_Explorer.hxx>

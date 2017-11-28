@@ -308,25 +308,68 @@ void MainWindow::OnSelectPolyData() {
   auto triangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   triangleFilter->SetInputData(connectFilter->GetOutput());
   triangleFilter->Update();
+  int nps = triangleFilter->GetOutput()->GetNumberOfPoints();
+  GeomPlate_BuildPlateSurface bpsrf;
+  for (int i = 0; i < nps; i = i + 10) {
+    double pt[3];
+    triangleFilter->GetOutput()->GetPoint(i, pt);
+    gp_Pnt pnt(pt[0], pt[1], pt[2]);
+    Handle(GeomPlate_PointConstraint) ptconstraint =
+        new GeomPlate_PointConstraint(pnt, 0);
+    bpsrf.Add(ptconstraint);
+  }
+  bpsrf.Perform();
+  Standard_Integer MaxSeg = 5;
+  Standard_Integer MaxDegree = 8;
+  Standard_Integer CritOrder = 0;
+  Standard_Real dmax, Tol;
+  Handle(GeomPlate_Surface) PSurf = bpsrf.Surface();
+  dmax = Max(0.001, 10 * bpsrf.G0Error());
+  Tol = 0.001;
+  GeomPlate_MakeApprox plate(PSurf, Tol, MaxSeg, MaxDegree, dmax, CritOrder);
+
+  Handle(Geom_Surface) Surf(plate.Surface());
+  Standard_Real Umin, Umax, Vmin, Vmax;
+  PSurf->Bounds(Umin, Umax, Vmin, Vmax);
+  BRepBuilderAPI_MakeFace MF(Surf, Umin, Umax, Vmin, Vmax, 0.01);
+
+  TopoDS_Face face;
+  face = MF.Face();
+
+  if (face.IsNull())
+    qDebug() << "face";
 
   QTime time = QTime::currentTime();
   QString modelName = "SelectData-" + QString::number(time.hour()) + "-" +
                       QString::number(time.minute()) + "-" +
                       QString::number(time.second());
-  auto stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
-  stlWriter->SetInputData(triangleFilter->GetOutput());
-  stlWriter->SetFileName(qPrintable(modelName.append(".stl")));
-  stlWriter->Write();
-  TopoDS_Shape ds;
-  Standard_CString stlPath = qPrintable(modelName);
-  StlAPI_Reader stlReader;
-  if (stlReader.Read(ds, stlPath))
-    qDebug() << "y";
-  if (ds.IsNull())
-    qDebug() << "s";
+  modelName.append(".stl");
+  /*  auto stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
+    stlWriter->SetInputData(triangleFilter->GetOutput());
+    stlWriter->SetFileName(qPrintable(modelName.append(".stl")));
+    stlWriter->Write();
+    TopoDS_Shape ds;
+    Standard_CString stlPath = qPrintable(modelName);
+    StlAPI_Reader stlReader;
+    if (stlReader.Read(ds, stlPath))
+      qDebug() << "y";
+    if (ds.IsNull())
+      qDebug() << "s";
+    qDebug() << "0";
+    TopoDS_Face suf = TopoDS::Face(ds);
+    qDebug() << "1";
+    Handle(Geom_Surface) gsuf = BRep_Tool::Surface(suf);
+    qDebug() << "2";
+    GeomConvert::SurfaceToBSplineSurface(gsuf);
+    qDebug() << "3";
+    BRep_Builder builder;
+    TopoDS_Face face;
+    builder.MakeFace(face, gsuf, Precision::Approximation());
+    qDebug() << "4";
+*/
   ModelItem *item =
-      new ModelItem(this, m_Render, modelName, connectFilter->GetOutput());
-  item->SetTopoDS_Shape(ds);
+      new ModelItem(this, m_Render, modelName, triangleFilter->GetOutput());
+  item->SetTopoDS_Shape(face);
   m_ModelList.append(item);
 
   this->AddModelItem(m_ModelList.last());
@@ -367,16 +410,40 @@ void MainWindow::OnStrechModel() {
   Handle(TopoDS_HShape) hshape =
       m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape();
   const TopoDS_Shape face = hshape->Shape();
+  //  BRepTools_ReShape reshape;
+  //  TopExp_Explorer ex(face, TopAbs_WIRE);
+  //  int ie = 5;
+  //  while (ex.More()) {
+  //    ie--;
+  //    if (ie < 3) {
+  //      reshape.Remove(ex.Current());
+  //    }
+  //    ex.Next();
+  //  }
+  //  qDebug() << ie;
   qDebug() << "strech 2";
   const TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
   qDebug() << "strech 3";
+
+  BRepFilletAPI_MakeFillet filet(solid);
+  TopExp_Explorer ex(solid, TopAbs_EDGE);
+  while (ex.More()) {
+    filet.Add(2, TopoDS::Edge(ex.Current()));
+    ex.Next();
+  }
+  filet.Build();
+  TopoDS_Shape ds;
+  ds = filet.Shape();
   auto pd = vtkSmartPointer<vtkPolyData>::New();
-  ConvertTopoDS2PolyData(solid, pd);
+  ConvertTopoDS2PolyData(ds, pd);
   qDebug() << "strech 4";
   QTime time = QTime::currentTime();
   QString modelName = "Strech-" + QString::number(time.hour()) + "-" +
                       QString::number(time.minute()) + "-" +
                       QString::number(time.second());
+  pd->BuildCells();
+  pd->GetLines()->Reset();
+
   ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
   m_ModelList.append(item);
   item->SetTopoDS_Shape(solid);
