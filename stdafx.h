@@ -14,6 +14,8 @@
 #include <QTime>
 #include <QToolTip>
 #include <QVTKWidget.h>
+#include <exception>
+using namespace std;
 // vtk include
 #include <vtkActor.h>
 #include <vtkAnnotatedCubeActor.h>
@@ -45,6 +47,8 @@
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
 // occt include
+#include <BRepAlgoAPI_Common.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -86,6 +90,7 @@
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Builder.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_HShape.hxx>
 #include <TopoDS_Shape.hxx>

@@ -21,6 +21,9 @@ public:
   void RemoveActor();
   void SetTopoDS_Shape(const TopoDS_Shape &ds);
   Handle(TopoDS_HShape) GetTopoDS_Shape();
+  void SetGeomSurface(Handle_Geom_Surface gs, double Umin, double Umax,
+                      double Vmin, double Vmax);
+  Handle_Geom_Surface GetGeomSurface(double bounds[]);
 
 private:
   QString m_ModelName;
@@ -29,6 +32,8 @@ private:
   double m_ModelColor[3];
   int m_ModelRep; // 0--surface,1--points,2--frame
   Handle(TopoDS_HShape) m_DS;
+  Handle_Geom_Surface m_GeomSurface;
+  double m_Bounds[4];
   vtkSmartPointer<vtkPolyData> m_ModelData;
   vtkSmartPointer<vtkRenderer> m_Renderer;
   vtkSmartPointer<vtkPolyDataMapper> m_ModelMapper;

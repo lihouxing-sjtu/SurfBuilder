@@ -54,8 +54,7 @@ void MainWindow::CollectionOfConnect() {
   //  qDebug() << dis;
   connect(m_StrechWidget, SIGNAL(pickBasePoint()), this,
           SLOT(OnStartPickBasePoint()));
-  connect(m_StrechWidget, SIGNAL(strechDirection()), this,
-          SLOT(OnStrechModel()));
+  connect(m_StrechWidget, SIGNAL(strechDone()), this, SLOT(OnStrechModel()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -328,16 +327,16 @@ void MainWindow::OnSelectPolyData() {
   Tol = 0.001;
   GeomPlate_MakeApprox plate(PSurf, Tol, MaxSeg, MaxDegree, dmax, CritOrder);
 
-  Handle(Geom_Surface) Surf(plate.Surface());
+  Handle_Geom_Surface Surf(plate.Surface());
   Standard_Real Umin, Umax, Vmin, Vmax;
   PSurf->Bounds(Umin, Umax, Vmin, Vmax);
-  BRepBuilderAPI_MakeFace MF(Surf, Umin, Umax, Vmin, Vmax, 0.01);
+  //  BRepBuilderAPI_MakeFace MF(Surf, Umin, Umax, Vmin, Vmax, 0.01);
 
-  TopoDS_Face face;
-  face = MF.Face();
+  //  TopoDS_Face face;
+  //  face = MF.Face();
 
-  if (face.IsNull())
-    qDebug() << "face";
+  //  if (face.IsNull())
+  //    qDebug() << "face";
 
   QTime time = QTime::currentTime();
   QString modelName = "SelectData-" + QString::number(time.hour()) + "-" +
@@ -369,16 +368,22 @@ void MainWindow::OnSelectPolyData() {
 */
   ModelItem *item =
       new ModelItem(this, m_Render, modelName, triangleFilter->GetOutput());
-  item->SetTopoDS_Shape(face);
+  // item->SetTopoDS_Shape(face);
+  item->SetGeomSurface(Surf, Umin, Umax, Vmin, Vmax);
   m_ModelList.append(item);
 
   this->AddModelItem(m_ModelList.last());
 }
 
 void MainWindow::OnStrechTopo_Shape() {
-  if (m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape()->Shape().IsNull())
+  double bounds[4];
+  if (m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape()->Shape().IsNull() &&
+      m_ModelList.at(m_SelectItemIndex)->GetGeomSurface(bounds).IsNull())
     return;
   m_StrechWidget->show();
+  m_StrechWidget->SetGeomSurface(
+      m_ModelList.at(m_SelectItemIndex)->GetGeomSurface(bounds), bounds[0],
+      bounds[1], bounds[2], bounds[3]);
 }
 
 void MainWindow::OnStartPickBasePoint() { ui->ViewWidget->SetPickPoint(); }
@@ -395,57 +400,14 @@ void MainWindow::OnEndPickBasePoint() {
 }
 
 void MainWindow::OnStrechModel() {
-  if (m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape()->Shape().IsNull())
-    return;
-  qDebug() << "strech 0";
-  double direction[3], distance;
-  distance = m_StrechWidget->GetDirectionAndDistance(direction);
-  vtkMath::Normalize(direction);
-  gp_Dir dir(direction[0], direction[1], direction[2]);
-  qDebug() << direction[0] << "  " << direction[1] << "  " << direction[2];
-  gp_Vec v = dir;
-  v.Scale(distance);
-  qDebug() << v.X() << "  " << v.Y() << "  " << v.Z();
-  qDebug() << "strech 1";
-  Handle(TopoDS_HShape) hshape =
-      m_ModelList.at(m_SelectItemIndex)->GetTopoDS_Shape();
-  const TopoDS_Shape face = hshape->Shape();
-  //  BRepTools_ReShape reshape;
-  //  TopExp_Explorer ex(face, TopAbs_WIRE);
-  //  int ie = 5;
-  //  while (ex.More()) {
-  //    ie--;
-  //    if (ie < 3) {
-  //      reshape.Remove(ex.Current());
-  //    }
-  //    ex.Next();
-  //  }
-  //  qDebug() << ie;
-  qDebug() << "strech 2";
-  const TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
-  qDebug() << "strech 3";
-
-  BRepFilletAPI_MakeFillet filet(solid);
-  TopExp_Explorer ex(solid, TopAbs_EDGE);
-  while (ex.More()) {
-    filet.Add(2, TopoDS::Edge(ex.Current()));
-    ex.Next();
-  }
-  filet.Build();
-  TopoDS_Shape ds;
-  ds = filet.Shape();
-  auto pd = vtkSmartPointer<vtkPolyData>::New();
-  ConvertTopoDS2PolyData(ds, pd);
-  qDebug() << "strech 4";
   QTime time = QTime::currentTime();
-  QString modelName = "Strech-" + QString::number(time.hour()) + "-" +
+  QString modelName = "StrechData-" + QString::number(time.hour()) + "-" +
                       QString::number(time.minute()) + "-" +
                       QString::number(time.second());
-  pd->BuildCells();
-  pd->GetLines()->Reset();
-
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  Handle_TopoDS_HShape ds = m_StrechWidget->GetData(pd);
   ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
   m_ModelList.append(item);
-  item->SetTopoDS_Shape(solid);
+  item->SetTopoDS_Shape(ds->Shape());
   this->AddModelItem(m_ModelList.last());
 }

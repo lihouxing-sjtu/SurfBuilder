@@ -94,6 +94,22 @@ void ModelItem::RemoveActor() {
 
 void ModelItem::SetTopoDS_Shape(const TopoDS_Shape &ds) { m_DS->Shape(ds); }
 
+void ModelItem::SetGeomSurface(Handle_Geom_Surface gs, double Umin, double Umax,
+                               double Vmin, double Vmax) {
+  m_GeomSurface = gs;
+  m_Bounds[0] = Umin;
+  m_Bounds[1] = Umax;
+  m_Bounds[2] = Vmin;
+  m_Bounds[3] = Vmax;
+}
+
+Handle_Geom_Surface ModelItem::GetGeomSurface(double bounds[]) {
+  for (int i = 0; i < 4; i++) {
+    bounds[i] = m_Bounds[i];
+  }
+  return m_GeomSurface;
+}
+
 Handle(TopoDS_HShape) ModelItem::GetTopoDS_Shape() { return m_DS; }
 
 void ModelItem::RenderWin() { m_Renderer->GetRenderWindow()->Render(); }

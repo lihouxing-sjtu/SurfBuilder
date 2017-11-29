@@ -11,12 +11,19 @@ NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
   m_ArrowActor = vtkSmartPointer<vtkActor>::New();
   m_ArrowActor->GetProperty()->SetColor(0.6, 0.2, 0.4);
   m_render->AddActor(m_ArrowActor);
-
+  m_StrechActor = vtkSmartPointer<vtkActor>::New();
+  m_render->AddActor(m_StrechActor);
+  m_ContourPoints = vtkSmartPointer<vtkPoints>::New();
+  m_StrechData = vtkSmartPointer<vtkPolyData>::New();
   for (int i = 0; i < 3; i++) {
     m_direction[i] = 0;
     m_basePoint[i] = 0;
     m_OrigionDirection[i] = 0;
   }
+  m_PlateDS = new TopoDS_HShape();
+  m_TubeDS = new TopoDS_HShape();
+  m_FinalDS = new TopoDS_HShape();
+
   connect(ui->PickBaseButton, SIGNAL(clicked(bool)), this,
           SLOT(OnPickBasePoint()));
   connect(ui->ResetDirectionButton, SIGNAL(clicked(bool)), this,
@@ -26,6 +33,29 @@ NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
   connect(ui->UpButton, SIGNAL(clicked(bool)), this, SLOT(OnUpButton()));
   connect(ui->DownButton, SIGNAL(clicked(bool)), this, SLOT(OnDownButton()));
   connect(ui->ApplyButton, SIGNAL(clicked(bool)), this, SLOT(OnApply()));
+  connect(ui->UminSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->UmaxSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->VminSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->VmaxSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->SampleSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
+  connect(ui->TubeHeightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
+  connect(ui->TubeRadiusSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
+
+  connect(ui->VminOffSetSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->VmaxOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
+  connect(ui->UminOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
+  connect(ui->UmaxOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildPlate()));
 }
 
 NormalWidget::~NormalWidget() { delete ui; }
@@ -37,6 +67,7 @@ void NormalWidget::SetPoints(double direction[], double location[]) {
     m_OrigionDirection[i] = m_direction[i];
   }
   this->BuildArrow();
+  this->BuildPlate();
 }
 
 double NormalWidget::GetDirectionAndDistance(double dir[]) {
@@ -44,6 +75,33 @@ double NormalWidget::GetDirectionAndDistance(double dir[]) {
     dir[i] = m_direction[i];
   }
   return m_Distance;
+}
+
+void NormalWidget::SetContourPoints(vtkPoints *pts) {
+  m_ContourPoints->DeepCopy(pts);
+}
+
+void NormalWidget::SetGeomSurface(GeomPlate_MakeApprox plate, double Umin,
+                                  double Umax, double Vmin, double Vmax) {
+  m_GeomSurface = plate.Surface();
+  m_PlateBounds[0] = Umin;
+  m_PlateBounds[1] = Umax;
+  m_PlateBounds[2] = Vmin;
+  m_PlateBounds[3] = Vmax;
+}
+
+void NormalWidget::SetGeomSurface(Handle_Geom_Surface gs, double Umin,
+                                  double Umax, double Vmin, double Vmax) {
+  m_GeomSurface = gs;
+  m_PlateBounds[0] = Umin;
+  m_PlateBounds[1] = Umax;
+  m_PlateBounds[2] = Vmin;
+  m_PlateBounds[3] = Vmax;
+}
+
+Handle_TopoDS_HShape NormalWidget::GetData(vtkPolyData *out) {
+  out->DeepCopy(m_StrechData);
+  return m_FinalDS;
 }
 
 void NormalWidget::GetArrow(double startPt[], double direction[], double length,
@@ -98,7 +156,103 @@ void NormalWidget::BuildArrow() {
   mapper->SetInputData(arrowData);
 
   m_ArrowActor->SetMapper(mapper);
+  m_ArrowActor->VisibilityOn();
   m_render->GetRenderWindow()->Render();
+}
+
+void NormalWidget::BuildPlate() {
+  if (m_basePoint[0] == 0 && m_basePoint[1] == 0 && m_basePoint[2] == 0) {
+    return;
+  }
+  if (m_GeomSurface.IsNull()) {
+    return;
+  }
+  foreach (vtkActor *ac, m_TubeActorList) { m_render->RemoveActor(ac); }
+  m_TubeActorList.clear();
+  m_render->GetRenderWindow()->Render();
+  Standard_Real Umin, Umax, Vmin, Vmax;
+  Umin = m_PlateBounds[0] + ui->UminSpinBox->value();
+  Umax = m_PlateBounds[1] + ui->UmaxSpinBox->value();
+  Vmin = m_PlateBounds[2] + ui->VminSpinBox->value();
+  Vmax = m_PlateBounds[3] + ui->VmaxSpinBox->value();
+
+  BRepBuilderAPI_MakeFace MF(m_GeomSurface, Umin, Umax, Vmin, Vmax, 0.01);
+  TopoDS_Face face;
+  face = MF.Face();
+
+  auto facepd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(face, facepd);
+
+  auto facept = vtkSmartPointer<vtkPoints>::New();
+  facept = facepd->GetPoints();
+  int numOffacept = facept->GetNumberOfPoints();
+  qDebug() << numOffacept;
+
+  vtkMath::Normalize(m_direction);
+  gp_Dir dir(m_direction[0], m_direction[1], m_direction[2]);
+  gp_Vec v = dir;
+  v.Scale(ui->DistanceSpinBox->value());
+  TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
+  TopoDS_Shape total;
+  for (int m = Umin + ui->UminOffSetSpinBox->value();
+       m < Umax - ui->UmaxOffSetSpinBox->value();
+       m = m + 1 + ui->SampleSpinBox->value()) {
+    for (int n = Vmin + ui->VminOffSetSpinBox->value();
+         n < Vmax - ui->VmaxOffSetSpinBox->value();
+         n = n + 1 + ui->SampleSpinBox->value()) {
+      gp_Pnt origion = m_GeomSurface->Value(m, n);
+      double _x =
+          origion.X() - m_direction[0] * ui->TubeHeightSpinBox->value() / 2;
+      double _y =
+          origion.Y() - m_direction[1] * ui->TubeHeightSpinBox->value() / 2;
+      double _z =
+          origion.Z() - m_direction[2] * ui->TubeHeightSpinBox->value() / 2;
+      gp_Pnt center(_x, _y, _z);
+
+      gp_Dir dir(m_direction[0], m_direction[1], m_direction[2]);
+      GC_MakeCircle circle(center, dir, ui->TubeRadiusSpinBox->value());
+      BRepBuilderAPI_MakeEdge circleEge(circle.Value());
+      TopoDS_Edge circleShape = circleEge.Edge();
+      BRepBuilderAPI_MakeWire circleWire(circleShape);
+      BRepBuilderAPI_MakeFace circleFace(circleWire.Wire());
+      if (total.IsNull())
+        total = circleFace;
+      else
+        total = BRepAlgoAPI_Fuse(total, circleFace);
+    }
+  }
+  gp_Dir dir1(m_direction[0], m_direction[1], m_direction[2]);
+  gp_Vec v1 = dir1;
+  v1.Scale(ui->TubeHeightSpinBox->value());
+  TopoDS_Shape tube = BRepPrimAPI_MakePrism(total, v1).Shape();
+  m_TubeDS->Shape(tube);
+  auto data = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(tube, data);
+  auto mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper1->SetInputData(data);
+  auto actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper1);
+  m_render->AddActor(actor);
+  m_TubeActorList.append(actor);
+  // const TopoDS_Shape tubes = BRepPrimAPI_MakePrism(totalShape, v).Shape();
+  m_PlateDS->Shape(solid);
+  auto strechData = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(solid, strechData);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(strechData);
+  m_StrechActor->SetMapper(mapper);
+  m_StrechActor->VisibilityOn();
+  m_render->GetRenderWindow()->Render();
+}
+
+void NormalWidget::ConvertTopoDS2PolyData(TopoDS_Shape input,
+                                          vtkPolyData *output) {
+  IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(input);
+  auto DS = vtkSmartPointer<IVtkTools_ShapeDataSource>::New();
+  DS->SetShape(aShapeImpl);
+  DS->Update();
+
+  output->DeepCopy(DS->GetOutput());
 }
 
 void NormalWidget::OnLeftButton() {
@@ -116,6 +270,7 @@ void NormalWidget::OnLeftButton() {
     m_direction[i] = transDirection[i];
   }
   this->BuildArrow();
+  this->BuildPlate();
 }
 
 void NormalWidget::OnRightButton() {
@@ -134,6 +289,7 @@ void NormalWidget::OnRightButton() {
     m_direction[i] = transDirection[i];
   }
   this->BuildArrow();
+  this->BuildPlate();
 }
 
 void NormalWidget::OnUpButton() {
@@ -155,6 +311,7 @@ void NormalWidget::OnUpButton() {
     m_direction[i] = transDirection[i];
   }
   this->BuildArrow();
+  this->BuildPlate();
 }
 
 void NormalWidget::OnDownButton() {
@@ -176,6 +333,7 @@ void NormalWidget::OnDownButton() {
     m_direction[i] = transDirection[i];
   }
   this->BuildArrow();
+  this->BuildPlate();
 }
 
 void NormalWidget::OnPickBasePoint() { emit pickBasePoint(); }
@@ -188,6 +346,35 @@ void NormalWidget::OnResetDirection() {
 }
 
 void NormalWidget::OnApply() {
-  m_Distance = ui->DistanceSpinBox->value();
-  emit strechDirection();
+  m_FinalDS->Shape(BRepAlgoAPI_Cut(m_PlateDS->Shape(), m_TubeDS->Shape()));
+  BRepFilletAPI_MakeFillet filet(m_FinalDS->Shape());
+  TopExp_Explorer ex(m_FinalDS->Shape(), TopAbs_EDGE);
+  while (ex.More()) {
+    filet.Add(ui->FilletSpinBox->value(), TopoDS::Edge(ex.Current()));
+    ex.Next();
+  }
+  try {
+    filet.Build();
+  } catch (Standard_Failure) {
+    Handle(Standard_Failure) E = Standard_Failure::Caught();
+    qDebug() << "failed";
+  }
+
+  if (filet.IsDone()) {
+    m_FinalDS->Shape(filet.Shape());
+    this->ConvertTopoDS2PolyData(m_FinalDS->Shape(), m_StrechData);
+    m_StrechData->BuildCells();
+    m_StrechData->GetLines()->Reset();
+    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(m_StrechData);
+    m_StrechActor->SetMapper(mapper);
+    m_StrechActor->VisibilityOff();
+    foreach (vtkActor *ac, m_TubeActorList) { m_render->RemoveActor(ac); }
+    m_TubeActorList.clear();
+    m_ArrowActor->VisibilityOff();
+    m_render->GetRenderWindow()->Render();
+    m_Distance = ui->DistanceSpinBox->value();
+    emit strechDone();
+  } else
+    qDebug() << "failed";
 }
