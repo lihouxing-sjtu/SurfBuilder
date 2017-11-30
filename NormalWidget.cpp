@@ -41,20 +41,22 @@ NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(BuildPlate()));
   connect(ui->VmaxSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
-  connect(ui->SampleSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->SampleDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
   connect(ui->TubeHeightSpinBox, SIGNAL(valueChanged(int)), this,
           SLOT(BuildPlate()));
   connect(ui->TubeRadiusSpinBox, SIGNAL(valueChanged(int)), this,
           SLOT(BuildPlate()));
 
-  connect(ui->VminOffSetSpinBox, SIGNAL(valueChanged(double)), this,
+  connect(ui->VminOffSetDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
-  connect(ui->VmaxOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->VmaxOffSetDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
-  connect(ui->UminOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->UminOffSetDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
-  connect(ui->UmaxOffSetSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->UmaxOffSetDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildPlate()));
+  connect(ui->DistanceSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
 }
 
@@ -192,14 +194,31 @@ void NormalWidget::BuildPlate() {
   gp_Dir dir(m_direction[0], m_direction[1], m_direction[2]);
   gp_Vec v = dir;
   v.Scale(ui->DistanceSpinBox->value());
+  //  BRepOffsetAPI_MakeOffsetShape myOffsetAlgo(
+  //      face, -ui->DistanceSpinBox->value(), Precision::Confusion(),
+  //      BRepOffset_Skin, Standard_True);
+  //  myOffsetAlgo.Build();
+  BRepOffset_MakeSimpleOffset myOffsetAlgo(face, ui->DistanceSpinBox->value());
+  myOffsetAlgo.SetBuildSolidFlag(Standard_True);
+  myOffsetAlgo.Perform();
+  TopoDS_Shape offsetface = myOffsetAlgo.GetResultShape();
+  auto offsetpd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(offsetface, offsetpd);
+  auto offsetmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  offsetmapper->SetInputData(offsetpd);
+  m_StrechActor->SetMapper(offsetmapper);
+  m_StrechActor->VisibilityOn();
+  m_render->GetRenderWindow()->Render();
+  //
+  return;
   TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
   TopoDS_Shape total;
-  for (int m = Umin + ui->UminOffSetSpinBox->value();
-       m < Umax - ui->UmaxOffSetSpinBox->value();
-       m = m + 1 + ui->SampleSpinBox->value()) {
-    for (int n = Vmin + ui->VminOffSetSpinBox->value();
-         n < Vmax - ui->VmaxOffSetSpinBox->value();
-         n = n + 1 + ui->SampleSpinBox->value()) {
+  for (double m = Umin + ui->UminOffSetDoubleSpinBox->value();
+       m < Umax - ui->UmaxOffSetDoubleSpinBox->value();
+       m = m + 1 + ui->SampleDoubleSpinBox->value()) {
+    for (double n = Vmin + ui->VminOffSetDoubleSpinBox->value();
+         n < Vmax - ui->VmaxOffSetDoubleSpinBox->value();
+         n = n + 1 + ui->SampleDoubleSpinBox->value()) {
       gp_Pnt origion = m_GeomSurface->Value(m, n);
       double _x =
           origion.X() - m_direction[0] * ui->TubeHeightSpinBox->value() / 2;

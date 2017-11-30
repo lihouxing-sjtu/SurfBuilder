@@ -35,12 +35,15 @@ void MainWindow::CollectionOfConnect() {
   m_ModelRightMenu = new QMenu(this);
   QAction *deleteModelAction = new QAction(tr("Delete"), m_ModelRightMenu);
   QAction *strechModelAction = new QAction(tr("Strech"), m_ModelRightMenu);
+  QAction *saveModelAction = new QAction(tr("Save"), m_ModelRightMenu);
   m_ModelRightMenu->addAction(deleteModelAction);
   m_ModelRightMenu->addAction(strechModelAction);
+  m_ModelRightMenu->addAction(saveModelAction);
   connect(deleteModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnDeleteModel()));
   connect(strechModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnStrechTopo_Shape()));
+  connect(saveModelAction, SIGNAL(triggered(bool)), this, SLOT(OnSaveModel()));
   connect(ui->ViewWidget, SIGNAL(endBSplineCurve()), this,
           SLOT(OnDrawBSplineCurve()));
   connect(ui->ViewWidget, SIGNAL(endSelectLoop()), this,
@@ -307,14 +310,20 @@ void MainWindow::OnSelectPolyData() {
   auto triangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   triangleFilter->SetInputData(connectFilter->GetOutput());
   triangleFilter->Update();
-  int nps = triangleFilter->GetOutput()->GetNumberOfPoints();
+
+  auto samplePoints = vtkSmartPointer<vtkPoints>::New();
+  samplePoints = triangleFilter->GetOutput()->GetPoints();
+
+  int nps = samplePoints->GetNumberOfPoints();
+  int step = nps / 2000;
+  qDebug() << nps;
   GeomPlate_BuildPlateSurface bpsrf;
-  for (int i = 0; i < nps; i = i + 10) {
+  for (int i = 0; i < nps; i = i + 1 + step) {
     double pt[3];
-    triangleFilter->GetOutput()->GetPoint(i, pt);
+    samplePoints->GetPoint(i, pt);
     gp_Pnt pnt(pt[0], pt[1], pt[2]);
     Handle(GeomPlate_PointConstraint) ptconstraint =
-        new GeomPlate_PointConstraint(pnt, 0);
+        new GeomPlate_PointConstraint(pnt, -1);
     bpsrf.Add(ptconstraint);
   }
   bpsrf.Perform();
@@ -410,4 +419,20 @@ void MainWindow::OnStrechModel() {
   m_ModelList.append(item);
   item->SetTopoDS_Shape(ds->Shape());
   this->AddModelItem(m_ModelList.last());
+}
+
+void MainWindow::OnSaveModel() {
+  QString IniPath = m_ModelList.at(m_SelectItemIndex)->GetModelName();
+  QString savePath = QFileDialog::getSaveFileName(this, tr("Save"), IniPath);
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  m_ModelList.at(m_SelectItemIndex)->GetModelData(pd);
+  auto triangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
+  triangleFilter->SetInputData(pd);
+  triangleFilter->Update();
+  ;
+  auto stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
+  stlWriter->SetInputData(triangleFilter->GetOutput());
+  stlWriter->SetFileName(qPrintable(savePath.append(".stl")));
+  stlWriter->Write();
+  stlWriter->Update();
 }

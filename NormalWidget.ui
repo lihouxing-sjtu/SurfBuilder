@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>426</width>
+    <width>508</width>
     <height>300</height>
    </rect>
   </property>
@@ -104,6 +104,9 @@
        <property name="maximum">
         <double>1000.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -119,6 +122,9 @@
        </property>
        <property name="maximum">
         <double>0.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -136,6 +142,9 @@
        <property name="maximum">
         <double>1000.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -151,6 +160,9 @@
        </property>
        <property name="maximum">
         <double>0.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -172,15 +184,15 @@
       </spacer>
      </item>
      <item>
-      <widget class="QSpinBox" name="SampleSpinBox">
+      <widget class="QDoubleSpinBox" name="SampleDoubleSpinBox">
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
        <property name="prefix">
-        <string>Sample: </string>
+        <string>sample:</string>
        </property>
        <property name="value">
-        <number>5</number>
+        <double>12.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -309,6 +321,23 @@
       </spacer>
      </item>
      <item>
+      <widget class="QRadioButton" name="OffSetRadioButton">
+       <property name="text">
+        <string>OffSet</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="StrechRadioButton">
+       <property name="text">
+        <string>Strech</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="ResetDirectionButton">
        <property name="text">
         <string>Reset Direction</string>
@@ -320,30 +349,42 @@
    <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
-      <widget class="QSpinBox" name="UminOffSetSpinBox">
+      <widget class="QDoubleSpinBox" name="UminOffSetDoubleSpinBox">
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
        <property name="value">
-        <number>3</number>
+        <double>3.000000000000000</double>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="UmaxOffSetSpinBox">
+      <widget class="QDoubleSpinBox" name="UmaxOffSetDoubleSpinBox">
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
        <property name="value">
-        <number>3</number>
+        <double>3.000000000000000</double>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="VminOffSetSpinBox">
+      <widget class="QDoubleSpinBox" name="VminOffSetDoubleSpinBox">
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
        <property name="value">
-        <number>3</number>
+        <double>3.000000000000000</double>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="VmaxOffSetSpinBox">
+      <widget class="QDoubleSpinBox" name="VmaxOffSetDoubleSpinBox">
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
        <property name="value">
-        <number>3</number>
+        <double>3.000000000000000</double>
        </property>
       </widget>
      </item>

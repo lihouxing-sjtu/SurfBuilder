@@ -52,6 +52,7 @@ protected slots:
   void OnStartPickBasePoint();
   void OnEndPickBasePoint();
   void OnStrechModel();
+  void OnSaveModel();
 };
 
 #endif // MAINWINDOW_H

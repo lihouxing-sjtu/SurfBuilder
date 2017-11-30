@@ -30,6 +30,7 @@ using namespace std;
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkPolyDataPointSampler.h>
 #include <vtkPropAssembly.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
