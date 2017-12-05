@@ -9,6 +9,7 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_RenderWin = vtkSmartPointer<vtkRenderWindow>::New();
   m_RenderRen = vtkSmartPointer<vtkRenderer>::New();
   m_Interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  m_InteractorStyle2D = vtkSmartPointer<vtkInteractorStyleImage>::New();
   m_TrackBall = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
 
   m_RenderWin->AddRenderer(m_RenderRen);
@@ -61,6 +62,8 @@ void CustomViewWidget::GetPickPoints(vtkPoints *output) {
   m_pickedPoints->Initialize();
   foreach (vtkActor *var, m_pickSpheres) { m_RenderRen->RemoveActor(var); }
   m_pickSpheres.clear();
+  m_Interactor->SetInteractorStyle(m_TrackBall);
+  m_RenderWin->Render();
 }
 
 void CustomViewWidget::SetPickPoint() {
@@ -71,6 +74,30 @@ void CustomViewWidget::SetPickPoint() {
   }
   m_pickState = PickPoint;
   this->setCursor(Qt::CrossCursor);
+}
+
+void CustomViewWidget::StartArcCut() {
+  if (m_pickState != None) {
+    QMessageBox::information(this, tr("Errir"),
+                             tr("Please finish the pick firstly!"));
+    return;
+  }
+  m_pickState = ArcCut;
+  m_Interactor->SetInteractorStyle(m_InteractorStyle2D);
+  this->setCursor(Qt::CrossCursor);
+}
+
+void CustomViewWidget::CancleArcCut() {
+  if (m_pickState != ArcCut)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  foreach (vtkActor *var, m_pickSpheres) { m_RenderRen->RemoveActor(var); }
+  m_pickSpheres.clear();
+  m_Interactor->SetInteractorStyle(m_TrackBall);
+  m_RenderWin->Render();
+  m_pickedPoints->Reset();
+  m_pickedPoints->Initialize();
 }
 
 void CustomViewWidget::resizeEvent(QResizeEvent *event) {
@@ -126,11 +153,15 @@ void CustomViewWidget::CollectionOfConnect() {
   selectRegion->addAction(startLoopAction);
   selectRegion->addAction(endLoopAction);
   m_RightButtonMenu->addMenu(selectRegion);
-
+  QAction *removeLastPoint =
+      new QAction(tr("remove last Point"), m_RightButtonMenu);
+  m_RightButtonMenu->addAction(removeLastPoint);
   connect(startLoopAction, SIGNAL(triggered(bool)), this,
           SLOT(OnBeginSelectLoop()));
   connect(endLoopAction, SIGNAL(triggered(bool)), this,
           SLOT(OnEndSelectLoop()));
+  connect(removeLastPoint, SIGNAL(triggered(bool)), this,
+          SLOT(OnRemoveLastPoint()));
 }
 
 void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
@@ -166,6 +197,10 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   QWidget::mouseDoubleClickEvent(event);
   if (m_pickState == PickPoint)
     OnEndPickPoint();
+  if (m_pickState == ArcCut) {
+    if (m_pickedPoints->GetNumberOfPoints() == 4)
+      endArcCutPoints();
+  }
 }
 
 void CustomViewWidget::keyPressEvent(QKeyEvent *event) {
@@ -190,6 +225,14 @@ void CustomViewWidget::mouseMoveEvent(QMouseEvent *event) {
   if (m_keyState == F1) {
     QVTKWidget::mouseMoveEvent(event);
   }
+}
+
+void CustomViewWidget::endArcCutPoints() {
+  if (m_pickState != ArcCut)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  emit this->endArcCut();
 }
 
 void CustomViewWidget::OnChangeBKColor1() {
@@ -295,4 +338,22 @@ void CustomViewWidget::OnEndPickPoint() {
   m_pickState = None;
   this->setCursor(Qt::ArrowCursor);
   emit this->endPickPoint();
+}
+
+void CustomViewWidget::OnRemoveLastPoint() {
+  int numOfPoint = m_pickedPoints->GetNumberOfPoints();
+  if (numOfPoint == 0)
+    return;
+  vtkSmartPointer<vtkPoints> newPoints = vtkSmartPointer<vtkPoints>::New();
+
+  for (vtkIdType i = 0; i < numOfPoint - 1; i++) {
+
+    double p[3];
+    m_pickedPoints->GetPoint(i, p);
+    newPoints->InsertNextPoint(p);
+  }
+  m_pickedPoints->ShallowCopy(newPoints);
+  m_RenderRen->RemoveActor(m_pickSpheres.last());
+  m_pickSpheres.removeLast();
+  m_RenderWin->Render();
 }

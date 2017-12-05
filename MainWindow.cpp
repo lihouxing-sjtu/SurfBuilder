@@ -58,6 +58,10 @@ void MainWindow::CollectionOfConnect() {
   connect(m_StrechWidget, SIGNAL(pickBasePoint()), this,
           SLOT(OnStartPickBasePoint()));
   connect(m_StrechWidget, SIGNAL(strechDone()), this, SLOT(OnStrechModel()));
+
+  connect(m_StrechWidget, SIGNAL(startArcCut()), this, SLOT(OnStartArcCut()));
+  connect(m_StrechWidget, SIGNAL(cancleArcCut()), this, SLOT(OnCancleArcCut()));
+  connect(ui->ViewWidget, SIGNAL(endArcCut()), this, SLOT(OnEndArcCut()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -435,4 +439,14 @@ void MainWindow::OnSaveModel() {
   stlWriter->SetFileName(qPrintable(savePath.append(".stl")));
   stlWriter->Write();
   stlWriter->Update();
+}
+
+void MainWindow::OnStartArcCut() { ui->ViewWidget->StartArcCut(); }
+
+void MainWindow::OnCancleArcCut() { ui->ViewWidget->CancleArcCut(); }
+
+void MainWindow::OnEndArcCut() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+  m_StrechWidget->SetArcCutPoints(points);
 }

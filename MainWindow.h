@@ -53,6 +53,9 @@ protected slots:
   void OnEndPickBasePoint();
   void OnStrechModel();
   void OnSaveModel();
+  void OnStartArcCut();
+  void OnCancleArcCut();
+  void OnEndArcCut();
 };
 
 #endif // MAINWINDOW_H

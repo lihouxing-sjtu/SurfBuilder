@@ -2,8 +2,8 @@
 #include "ui_NormalWidget.h"
 
 NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
-    : QDialog(parent), isPickPoint(false), m_Distance(0),
-      ui(new Ui::NormalWidget) {
+    : QDialog(parent), isPickPoint(false), m_Distance(0), isArcCutStart(0),
+      isArcCutEnd(0), ui(new Ui::NormalWidget) {
   ui->setupUi(this);
   this->setWindowFlags(Qt::WindowStaysOnTopHint);
   m_render = vtkSmartPointer<vtkRenderer>::New();
@@ -13,15 +13,26 @@ NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
   m_render->AddActor(m_ArrowActor);
   m_StrechActor = vtkSmartPointer<vtkActor>::New();
   m_render->AddActor(m_StrechActor);
-  m_ContourPoints = vtkSmartPointer<vtkPoints>::New();
+  m_ArcCutActor = vtkSmartPointer<vtkActor>::New();
+  m_ArcCutActor->GetProperty()->SetColor(0.4, 0.2, 0.6);
+  m_ArcCutActor->GetProperty()->SetOpacity(0.5);
+  m_render->AddActor(m_ArcCutActor);
+
   m_StrechData = vtkSmartPointer<vtkPolyData>::New();
+  m_ArcCutPoints = vtkSmartPointer<vtkPoints>::New();
   for (int i = 0; i < 3; i++) {
     m_direction[i] = 0;
     m_basePoint[i] = 0;
     m_OrigionDirection[i] = 0;
+    m_ArcCutDirction[i] = 0;
   }
+  for (int i = 0; i < 4; i++) {
+    m_PlateBounds[i] = 0;
+  }
+
   m_PlateDS = new TopoDS_HShape();
   m_TubeDS = new TopoDS_HShape();
+  m_ArcCutDS = new TopoDS_HShape();
   m_FinalDS = new TopoDS_HShape();
 
   connect(ui->PickBaseButton, SIGNAL(clicked(bool)), this,
@@ -58,6 +69,13 @@ NormalWidget::NormalWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(BuildPlate()));
   connect(ui->DistanceSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildPlate()));
+  connect(ui->ArcCutButton, SIGNAL(clicked(bool)), this, SLOT(OnArcCut()));
+  connect(ui->CancleArcButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnCancleArcCut()));
+  connect(ui->ArcCutLengthSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildArcCut()));
+  connect(ui->ArcCutPositionSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildArcCut()));
 }
 
 NormalWidget::~NormalWidget() { delete ui; }
@@ -77,10 +95,6 @@ double NormalWidget::GetDirectionAndDistance(double dir[]) {
     dir[i] = m_direction[i];
   }
   return m_Distance;
-}
-
-void NormalWidget::SetContourPoints(vtkPoints *pts) {
-  m_ContourPoints->DeepCopy(pts);
 }
 
 void NormalWidget::SetGeomSurface(GeomPlate_MakeApprox plate, double Umin,
@@ -104,6 +118,26 @@ void NormalWidget::SetGeomSurface(Handle_Geom_Surface gs, double Umin,
 Handle_TopoDS_HShape NormalWidget::GetData(vtkPolyData *out) {
   out->DeepCopy(m_StrechData);
   return m_FinalDS;
+}
+
+void NormalWidget::SetArcCutPoints(vtkPoints *pts) {
+  double focusPoint[3];
+  m_render->GetActiveCamera()->GetDirectionOfProjection(m_ArcCutDirction);
+  vtkMath::MultiplyScalar(m_ArcCutDirction, -1);
+  m_render->GetActiveCamera()->GetFocalPoint(focusPoint);
+  auto plane = vtkSmartPointer<vtkPlane>::New();
+  plane->SetOrigin(focusPoint);
+  plane->SetNormal(m_ArcCutDirction);
+  m_ArcCutPoints->Initialize();
+  for (int i = 0; i < pts->GetNumberOfPoints(); i++) {
+    double p[3];
+    pts->GetPoint(i, p);
+    plane->ProjectPoint(p, p);
+    m_ArcCutPoints->InsertNextPoint(p);
+    qDebug() << i;
+  }
+  isArcCutEnd = true;
+  this->BuildArcCut();
 }
 
 void NormalWidget::GetArrow(double startPt[], double direction[], double length,
@@ -198,10 +232,14 @@ void NormalWidget::BuildPlate() {
   //      face, -ui->DistanceSpinBox->value(), Precision::Confusion(),
   //      BRepOffset_Skin, Standard_True);
   //  myOffsetAlgo.Build();
+
+  /*
   BRepOffset_MakeSimpleOffset myOffsetAlgo(face, ui->DistanceSpinBox->value());
-  myOffsetAlgo.SetBuildSolidFlag(Standard_True);
+   myOffsetAlgo.SetBuildSolidFlag(Standard_True);
   myOffsetAlgo.Perform();
   TopoDS_Shape offsetface = myOffsetAlgo.GetResultShape();
+  m_PlateDS->Shape(offsetface);
+
   auto offsetpd = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(offsetface, offsetpd);
   auto offsetmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -209,8 +247,10 @@ void NormalWidget::BuildPlate() {
   m_StrechActor->SetMapper(offsetmapper);
   m_StrechActor->VisibilityOn();
   m_render->GetRenderWindow()->Render();
+  */
+
   //
-  return;
+  // return;
   TopoDS_Shape solid = BRepPrimAPI_MakePrism(face, v).Shape();
   TopoDS_Shape total;
   for (double m = Umin + ui->UminOffSetDoubleSpinBox->value();
@@ -262,6 +302,115 @@ void NormalWidget::BuildPlate() {
   m_StrechActor->SetMapper(mapper);
   m_StrechActor->VisibilityOn();
   m_render->GetRenderWindow()->Render();
+}
+
+void NormalWidget::OnArcCut() {
+  if (ui->ArcCutButton->isChecked()) {
+    // define the arc points
+    if (!isArcCutStart) {
+      isArcCutStart = true;
+      emit startArcCut();
+    }
+  } else {
+    if (!isArcCutEnd) {
+      ui->ArcCutButton->setChecked(true);
+      return;
+    }
+    qDebug() << "dadf";
+    TopoDS_Shape left =
+        BRepAlgoAPI_Cut(m_PlateDS->Shape(), m_ArcCutDS->Shape());
+    m_PlateDS->Shape(left);
+
+    auto plateData = vtkSmartPointer<vtkPolyData>::New();
+    this->ConvertTopoDS2PolyData(m_PlateDS->Shape(), plateData);
+    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(plateData);
+
+    m_StrechActor->SetMapper(mapper);
+    m_StrechActor->VisibilityOn();
+
+    isArcCutEnd = false;
+    isArcCutStart = false;
+    qDebug() << "dadf";
+    m_ArcCutActor->VisibilityOff();
+    m_render->GetRenderWindow()->Render();
+  }
+}
+
+void NormalWidget::OnCancleArcCut() {
+  // cancle the arc cut
+  ui->ArcCutButton->setChecked(false);
+  isArcCutEnd = false;
+  isArcCutStart = false;
+  m_ArcCutActor->VisibilityOff();
+  m_render->GetRenderWindow()->Render();
+  emit cancleArcCut();
+}
+
+void NormalWidget::BuildArcCut() {
+  if (m_ArcCutPoints->GetNumberOfPoints() == 0)
+    return;
+  double lengthOfArcCut = ui->ArcCutLengthSlider->value();
+  double positionOfArcCut = ui->ArcCutPositionSlider->value();
+  double arcPts[4][3];
+  for (int j = 0; j < 4; j++) {
+    for (int i = 0; i < 3; i++) {
+      arcPts[j][i] = m_ArcCutPoints->GetPoint(j)[i] +
+                     positionOfArcCut * m_ArcCutDirction[i];
+    }
+  }
+  gp_Pnt p1(arcPts[0][0], arcPts[0][1], arcPts[0][2]);
+  gp_Pnt p2(arcPts[1][0], arcPts[1][1], arcPts[1][2]);
+  gp_Pnt p3(arcPts[2][0], arcPts[2][1], arcPts[2][2]);
+  gp_Pnt p4(arcPts[3][0], arcPts[3][1], arcPts[3][2]);
+
+  GC_MakeCircle innerCircle(p1, p2, p3);
+
+  GC_MakeCircle outCircle(p1, p4, p3);
+
+  if (innerCircle.IsDone() && outCircle.IsDone()) {
+    BRepBuilderAPI_MakeEdge innerCircleEdgeBuilder(innerCircle.Value());
+    TopoDS_Edge innerCircleEdge = innerCircleEdgeBuilder.Edge();
+    BRepBuilderAPI_MakeWire innerCirclWireBuilder(innerCircleEdge);
+    BRepBuilderAPI_MakeFace innerCircleFaceBuilder(
+        innerCirclWireBuilder.Wire());
+    TopoDS_Shape innerFace = innerCircleFaceBuilder.Face();
+    gp_Dir dir0(-m_ArcCutDirction[0], -m_ArcCutDirction[1],
+                -m_ArcCutDirction[2]);
+    gp_Vec v0 = dir0;
+    v0.Scale(5);
+    gp_Trsf T;
+    T.SetTranslation(v0);
+    BRepBuilderAPI_Transform theTrsf(T);
+    theTrsf.Perform(innerFace);
+    TopoDS_Shape newInnerFace = theTrsf.Shape();
+
+    gp_Dir dir1(m_ArcCutDirction[0], m_ArcCutDirction[1], m_ArcCutDirction[2]);
+    gp_Vec v1 = dir1;
+    v1.Scale(lengthOfArcCut);
+
+    gp_Vec v2 = dir1;
+    v2.Scale(lengthOfArcCut + 10);
+
+    TopoDS_Shape innerSolid = BRepPrimAPI_MakePrism(newInnerFace, v2).Shape();
+
+    BRepBuilderAPI_MakeEdge outCircleEdgeBuilder(outCircle.Value());
+    TopoDS_Edge outCircleEdge = outCircleEdgeBuilder.Edge();
+    BRepBuilderAPI_MakeWire outCirclWireBuilder(outCircleEdge);
+    BRepBuilderAPI_MakeFace outCircleFaceBuilder(outCirclWireBuilder.Wire());
+    TopoDS_Shape outFace = outCircleFaceBuilder.Face();
+    TopoDS_Shape outSolid = BRepPrimAPI_MakePrism(outFace, v1).Shape();
+
+    // boolean operation
+    m_ArcCutDS->Shape(BRepAlgoAPI_Cut(outSolid, innerSolid));
+    auto arcpd = vtkSmartPointer<vtkPolyData>::New();
+    this->ConvertTopoDS2PolyData(m_ArcCutDS->Shape(), arcpd);
+    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(arcpd);
+    m_ArcCutActor->SetMapper(mapper);
+    m_ArcCutActor->VisibilityOn();
+    m_render->GetRenderWindow()->Render();
+  }
 }
 
 void NormalWidget::ConvertTopoDS2PolyData(TopoDS_Shape input,
