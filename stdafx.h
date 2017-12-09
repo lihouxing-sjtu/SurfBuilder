@@ -50,6 +50,7 @@ using namespace std;
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
 // occt include
+
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
@@ -65,6 +66,7 @@ using namespace std;
 #include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
 #include <BRepTools.hxx>
 #include <BRepTools_ReShape.hxx>
 #include <GCE2d_MakeSegment.hxx>
@@ -100,6 +102,7 @@ using namespace std;
 #include <TopoDS_Face.hxx>
 #include <TopoDS_HShape.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_Solid.hxx>
 #include <TopoDS_TShape.hxx>
 #include <TopoDS_Wire.hxx>
 #include <gp_Ax1.hxx>

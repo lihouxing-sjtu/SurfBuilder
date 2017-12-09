@@ -32,6 +32,7 @@ private:
   QMenu *m_ModelRightMenu;
   int m_SelectItemIndex;
   NormalWidget *m_StrechWidget;
+  vtkSmartPointer<vtkActor> m_HingeActor;
 
 protected:
   void CollectionOfConnect();
@@ -56,6 +57,7 @@ protected slots:
   void OnStartArcCut();
   void OnCancleArcCut();
   void OnEndArcCut();
+  void OnUpDateHingeButton();
 };
 
 #endif // MAINWINDOW_H

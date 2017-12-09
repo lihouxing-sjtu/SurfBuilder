@@ -15,6 +15,9 @@ MainWindow::MainWindow(QWidget *parent)
   m_PreviewActor = vtkSmartPointer<vtkActor>::New();
   m_Render->AddActor(m_PreviewActor);
 
+  m_HingeActor = vtkSmartPointer<vtkActor>::New();
+  m_Render->AddActor(m_HingeActor);
+
   m_StrechWidget = new NormalWidget(0, m_Render);
   m_StrechWidget->hide();
   this->CollectionOfConnect();
@@ -62,6 +65,11 @@ void MainWindow::CollectionOfConnect() {
   connect(m_StrechWidget, SIGNAL(startArcCut()), this, SLOT(OnStartArcCut()));
   connect(m_StrechWidget, SIGNAL(cancleArcCut()), this, SLOT(OnCancleArcCut()));
   connect(ui->ViewWidget, SIGNAL(endArcCut()), this, SLOT(OnEndArcCut()));
+
+  connect(ui->UpDateHingeButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnUpDateHingeButton()));
+  connect(ui->PositionHingeSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(OnUpDateHingeButton()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -449,4 +457,215 @@ void MainWindow::OnEndArcCut() {
   auto points = vtkSmartPointer<vtkPoints>::New();
   ui->ViewWidget->GetPickPoints(points);
   m_StrechWidget->SetArcCutPoints(points);
+}
+
+void MainWindow::OnUpDateHingeButton() {
+  double diameterHinge = ui->HingeDiameterSpinBox->value();
+  double thicknessHinge = ui->HingeThicknessSpinBox->value();
+  double heightHinge = ui->HingeHeightSpinBox->value();
+
+  double positionHinge[3], directionHinge[3];
+  directionHinge[0] = ui->DirectionSpinBoxX->value();
+  directionHinge[1] = ui->DirectionSpinBoxY->value();
+  directionHinge[2] = ui->DirectionSpinBoxZ->value();
+
+  positionHinge[0] = ui->BasePointSpinBoxX->value();
+  positionHinge[1] = ui->BasePointSpinBoxY->value();
+  positionHinge[2] = ui->BasePointSpinBoxZ->value();
+
+  for (int i = 0; i < 3; i++) {
+    positionHinge[i] =
+        positionHinge[i] + ui->PositionHingeSlider->value() * directionHinge[i];
+  }
+
+  double crossDirection[3];
+  vtkMath::Perpendiculars(directionHinge, crossDirection, NULL,
+                          vtkMath::Pi() * ui->StartCutSpinBox->value() / 180.0);
+
+  double radialPoint1[3], radiaPoint2[3];
+  for (int i = 0; i < 3; i++) {
+    radialPoint1[i] = positionHinge[i] + crossDirection[i] * diameterHinge / 2;
+    radiaPoint2[i] = radialPoint1[i] + crossDirection[i] * thicknessHinge;
+  }
+
+  double sectionPoint[6][3];
+  for (int i = 0; i < 3; i++) {
+    sectionPoint[0][i] = radialPoint1[i] - directionHinge[i] * heightHinge / 2;
+    sectionPoint[5][i] = sectionPoint[0][i] + directionHinge[i] * heightHinge;
+
+    sectionPoint[2][i] = radiaPoint2[i] - directionHinge[i] * heightHinge / 2;
+    sectionPoint[3][i] = sectionPoint[2][i] + directionHinge[i] * heightHinge;
+
+    sectionPoint[1][i] =
+        (sectionPoint[0][i] + sectionPoint[2][i]) / 2 - directionHinge[i] * 5;
+    sectionPoint[4][i] =
+        sectionPoint[1][i] + directionHinge[i] * (heightHinge + 10);
+  }
+
+  gp_Pnt p1(sectionPoint[0][0], sectionPoint[0][1], sectionPoint[0][2]);
+  gp_Pnt p2(sectionPoint[1][0], sectionPoint[1][1], sectionPoint[1][2]);
+  gp_Pnt p3(sectionPoint[2][0], sectionPoint[2][1], sectionPoint[2][2]);
+  gp_Pnt p4(sectionPoint[3][0], sectionPoint[3][1], sectionPoint[3][2]);
+  gp_Pnt p5(sectionPoint[4][0], sectionPoint[4][1], sectionPoint[4][2]);
+  gp_Pnt p6(sectionPoint[5][0], sectionPoint[5][1], sectionPoint[5][2]);
+
+  Handle(Geom_TrimmedCurve) ArcOfCircle1 = GC_MakeArcOfCircle(p1, p2, p3);
+  Handle(Geom_TrimmedCurve) aSegment1 = GC_MakeSegment(p3, p4);
+  Handle(Geom_TrimmedCurve) ArcOfCircle2 = GC_MakeArcOfCircle(p4, p5, p6);
+  Handle(Geom_TrimmedCurve) aSegment2 = GC_MakeSegment(p6, p1);
+
+  TopoDS_Edge aEdge1 = BRepBuilderAPI_MakeEdge(ArcOfCircle1);
+  TopoDS_Edge aEdge2 = BRepBuilderAPI_MakeEdge(aSegment1);
+  TopoDS_Edge aEdge3 = BRepBuilderAPI_MakeEdge(ArcOfCircle2);
+  TopoDS_Edge aEdge4 = BRepBuilderAPI_MakeEdge(aSegment2);
+  TopoDS_Wire aWire = BRepBuilderAPI_MakeWire(aEdge1, aEdge2, aEdge3, aEdge4);
+
+  TopoDS_Face aFace = BRepBuilderAPI_MakeFace(aWire);
+
+  gp_Ax1 axis(gp_Pnt(positionHinge[0], positionHinge[1], positionHinge[2]),
+              gp_Dir(directionHinge[0], directionHinge[1], directionHinge[2]));
+  BRepPrimAPI_MakeRevol revol(aFace, axis);
+  revol.Build();
+  TopoDS_Shape aSolid = revol.Shape();
+
+  double cutSection[8][3];
+  double cutThickness, cutHeight;
+  cutThickness = ui->CutThickSpinBox->value();
+  cutHeight = ui->CutHeightSpinBox->value();
+  double cutR = 2;
+  for (int i = 0; i < 3; i++) {
+    cutSection[0][i] = radiaPoint2[i] - crossDirection[i] * cutThickness -
+                       directionHinge[i] * cutHeight / 2;
+    cutSection[1][i] =
+        cutSection[0][i] - directionHinge[i] * cutR + crossDirection[i] * cutR;
+    cutSection[2][i] = cutSection[0][i] + crossDirection[i] * cutR * 2;
+    cutSection[3][i] =
+        cutSection[0][i] + crossDirection[i] * (cutThickness + 5);
+
+    cutSection[4][i] = cutSection[3][i] + directionHinge[i] * cutHeight;
+    cutSection[5][i] = cutSection[2][i] + directionHinge[i] * cutHeight;
+    cutSection[6][i] =
+        cutSection[1][i] + directionHinge[i] * (cutHeight + cutR * 2);
+    cutSection[7][i] = cutSection[0][i] + directionHinge[i] * cutHeight;
+  }
+  gp_Pnt cutP1(cutSection[0][0], cutSection[0][1], cutSection[0][2]);
+  gp_Pnt cutP2(cutSection[1][0], cutSection[1][1], cutSection[1][2]);
+  gp_Pnt cutP3(cutSection[2][0], cutSection[2][1], cutSection[2][2]);
+  gp_Pnt cutP4(cutSection[3][0], cutSection[3][1], cutSection[3][2]);
+  gp_Pnt cutP5(cutSection[4][0], cutSection[4][1], cutSection[4][2]);
+  gp_Pnt cutP6(cutSection[5][0], cutSection[5][1], cutSection[5][2]);
+  gp_Pnt cutP7(cutSection[6][0], cutSection[6][1], cutSection[6][2]);
+  gp_Pnt cutP8(cutSection[7][0], cutSection[7][1], cutSection[7][2]);
+
+  Handle(Geom_TrimmedCurve) cutArc1 = GC_MakeArcOfCircle(cutP1, cutP2, cutP3);
+  Handle(Geom_TrimmedCurve) cutSeg1 = GC_MakeSegment(cutP3, cutP4);
+  Handle(Geom_TrimmedCurve) cutSeg2 = GC_MakeSegment(cutP4, cutP5);
+  Handle(Geom_TrimmedCurve) cutSeg3 = GC_MakeSegment(cutP5, cutP6);
+  Handle(Geom_TrimmedCurve) cutArc2 = GC_MakeArcOfCircle(cutP6, cutP7, cutP8);
+  Handle(Geom_TrimmedCurve) cutSeg4 = GC_MakeSegment(cutP8, cutP1);
+
+  TopoDS_Edge cutEdge1 = BRepBuilderAPI_MakeEdge(cutArc1);
+  TopoDS_Edge cutEdge2 = BRepBuilderAPI_MakeEdge(cutSeg1);
+  TopoDS_Edge cutEdge3 = BRepBuilderAPI_MakeEdge(cutSeg2);
+  TopoDS_Edge cutEdge4 = BRepBuilderAPI_MakeEdge(cutSeg3);
+  TopoDS_Edge cutEdge5 = BRepBuilderAPI_MakeEdge(cutArc2);
+  TopoDS_Edge cutEdge6 = BRepBuilderAPI_MakeEdge(cutSeg4);
+  BRepBuilderAPI_MakeWire cutMakeWire;
+  cutMakeWire.Add(cutEdge1);
+  cutMakeWire.Add(cutEdge2);
+  cutMakeWire.Add(cutEdge3);
+  cutMakeWire.Add(cutEdge4);
+  cutMakeWire.Add(cutEdge5);
+  cutMakeWire.Add(cutEdge6);
+  cutMakeWire.Build();
+  TopoDS_Wire cutWire = cutMakeWire.Wire();
+
+  TopoDS_Shape cutFace = BRepBuilderAPI_MakeFace(cutWire);
+  double cutAngle = vtkMath::Pi() * ui->EndCutSpinBox->value() / 180.0;
+  BRepPrimAPI_MakeRevol cutRevol(cutFace, axis, cutAngle);
+  cutRevol.Build();
+  TopoDS_Shape cutSolid = cutRevol.Shape();
+  TopoDS_Shape withCut = BRepAlgoAPI_Cut(aSolid, cutSolid);
+
+  double movingSection[8][3];
+  double deltaMove = 0.5;
+  double movingHeight = cutHeight - 2 * deltaMove;
+  double movingThickness = ui->MoveThicknessSpinBox->value();
+  double moveCrossDirection[3], moveRadialPoint[3];
+  vtkMath::Perpendiculars(directionHinge, moveCrossDirection, NULL,
+                          vtkMath::Pi() * ui->StartMoveSpinBox->value() /
+                              180.0);
+
+  for (int i = 0; i < 3; i++) {
+    moveRadialPoint[i] =
+        positionHinge[i] +
+        moveCrossDirection[i] *
+            (diameterHinge / 2 + deltaMove + thicknessHinge - cutThickness);
+    movingSection[0][i] =
+        moveRadialPoint[i] + directionHinge[i] * movingHeight / 2;
+    movingSection[1][i] = movingSection[0][i] +
+                          moveCrossDirection[i] * (cutR - deltaMove) +
+                          directionHinge[i] * (cutR - deltaMove);
+    movingSection[2][i] =
+        movingSection[0][i] + moveCrossDirection[i] * (cutR - deltaMove) * 2;
+    movingSection[3][i] =
+        movingSection[0][i] + moveCrossDirection[i] * movingThickness;
+    movingSection[4][i] =
+        movingSection[3][i] - directionHinge[i] * movingHeight;
+    movingSection[7][i] =
+        movingSection[0][i] - directionHinge[i] * movingHeight;
+    movingSection[6][i] = movingSection[7][i] +
+                          moveCrossDirection[i] * (cutR - deltaMove) -
+                          directionHinge[i] * (cutR - deltaMove);
+    movingSection[5][i] =
+        movingSection[7][i] + moveCrossDirection[i] * (cutR - deltaMove) * 2;
+  }
+
+  gp_Pnt moveP1(movingSection[0][0], movingSection[0][1], movingSection[0][2]);
+  gp_Pnt moveP2(movingSection[1][0], movingSection[1][1], movingSection[1][2]);
+  gp_Pnt moveP3(movingSection[2][0], movingSection[2][1], movingSection[2][2]);
+  gp_Pnt moveP4(movingSection[3][0], movingSection[3][1], movingSection[3][2]);
+  gp_Pnt moveP5(movingSection[4][0], movingSection[4][1], movingSection[4][2]);
+  gp_Pnt moveP6(movingSection[5][0], movingSection[5][1], movingSection[5][2]);
+  gp_Pnt moveP7(movingSection[6][0], movingSection[6][1], movingSection[6][2]);
+  gp_Pnt moveP8(movingSection[7][0], movingSection[7][1], movingSection[7][2]);
+
+  Handle(Geom_TrimmedCurve) moveArc1 =
+      GC_MakeArcOfCircle(moveP8, moveP7, moveP6);
+  Handle(Geom_TrimmedCurve) moveSeg1 = GC_MakeSegment(moveP6, moveP5);
+  Handle(Geom_TrimmedCurve) moveSeg2 = GC_MakeSegment(moveP5, moveP4);
+  Handle(Geom_TrimmedCurve) moveSeg3 = GC_MakeSegment(moveP4, moveP3);
+  Handle(Geom_TrimmedCurve) moveArc2 =
+      GC_MakeArcOfCircle(moveP3, moveP2, moveP1);
+  Handle(Geom_TrimmedCurve) moveSeg4 = GC_MakeSegment(moveP1, moveP8);
+
+  TopoDS_Edge moveEdge1 = BRepBuilderAPI_MakeEdge(moveArc1);
+  TopoDS_Edge moveEdge2 = BRepBuilderAPI_MakeEdge(moveSeg1);
+  TopoDS_Edge moveEdge3 = BRepBuilderAPI_MakeEdge(moveSeg2);
+  TopoDS_Edge moveEdge4 = BRepBuilderAPI_MakeEdge(moveSeg3);
+  TopoDS_Edge moveEdge5 = BRepBuilderAPI_MakeEdge(moveArc2);
+  TopoDS_Edge moveEdge6 = BRepBuilderAPI_MakeEdge(moveSeg4);
+
+  BRepBuilderAPI_MakeWire moveMakeWire;
+  moveMakeWire.Add(moveEdge1);
+  moveMakeWire.Add(moveEdge2);
+  moveMakeWire.Add(moveEdge3);
+  moveMakeWire.Add(moveEdge4);
+  moveMakeWire.Add(moveEdge5);
+  moveMakeWire.Add(moveEdge6);
+  moveMakeWire.Build();
+  TopoDS_Wire moveWire = moveMakeWire.Wire();
+  TopoDS_Shape moveFace = BRepBuilderAPI_MakeFace(moveWire);
+  double moveAngle = vtkMath::Pi() * ui->EndMoveSpinBox->value() / 180.0;
+  BRepPrimAPI_MakeRevol moveRevol(moveFace, axis, moveAngle);
+  moveRevol.Build();
+  TopoDS_Shape moveSolid = moveRevol.Shape();
+  TopoDS_Shape withMove = BRepAlgoAPI_Fuse(withCut, moveSolid);
+
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(withMove, pd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(pd);
+  m_HingeActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
 }
