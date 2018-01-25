@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 #include "ModelItem.h"
 #include "NormalWidget.h"
+#include "SurfaceFormWidget.h"
 #include "stdafx.h"
 #include <QComboBox>
 #include <QDebug>
@@ -33,6 +34,24 @@ private:
   int m_SelectItemIndex;
   NormalWidget *m_StrechWidget;
   vtkSmartPointer<vtkActor> m_HingeActor;
+  Handle_TopoDS_HShape m_HingeShape;
+  SurfaceFormWidget *m_SurfaceForm;
+  double m_UpDirection[3], m_DownDirection[3];
+
+  Handle(TopoDS_HShape) m_downHingeSurface;
+  vtkSmartPointer<vtkActor> m_downHingeActor;
+  double m_downHingeCenter[3];
+  vtkSmartPointer<vtkActor> m_downConnectActor;
+
+  Handle(TopoDS_HShape) m_upHingeSurface;
+  vtkSmartPointer<vtkActor> m_upHingeActor;
+  double m_upHingeCenter[3];
+  vtkSmartPointer<vtkActor> m_upConnectActor;
+
+  Handle(TopoDS_HShape) m_upOffSetUp;
+  Handle(TopoDS_HShape) m_upOffSetDown;
+  Handle(TopoDS_HShape) m_downOffSetUp;
+  Handle(TopoDS_HShape) m_downOffSetDown;
 
 protected:
   void CollectionOfConnect();
@@ -41,6 +60,7 @@ protected:
 
 protected slots:
   void OnImportSTL();
+  void OnAddToModel();
   void OnChangeModelColor(QTreeWidgetItem *doubleClickedItem);
   void OnChangeModelOpacity(QWidget *);
   void OnChangeModelRep(QWidget *);
@@ -58,6 +78,12 @@ protected slots:
   void OnCancleArcCut();
   void OnEndArcCut();
   void OnUpDateHingeButton();
+  void OnSurfaceForm();
+  void OnSetSurfaceFormPoints();
+
+  void Onvisibility();
+  void OnConnectDown();
+  void OnConnectUp();
 };
 
 #endif // MAINWINDOW_H

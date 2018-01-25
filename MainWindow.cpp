@@ -18,9 +18,42 @@ MainWindow::MainWindow(QWidget *parent)
   m_HingeActor = vtkSmartPointer<vtkActor>::New();
   m_Render->AddActor(m_HingeActor);
 
+  m_downHingeActor = vtkSmartPointer<vtkActor>::New();
+  m_downHingeActor->GetProperty()->SetColor(0, 0, 1);
+
+  m_downConnectActor = vtkSmartPointer<vtkActor>::New();
+  m_downConnectActor->GetProperty()->SetColor(1, 1, 0);
+  m_Render->AddActor(m_downConnectActor);
+  m_Render->AddActor(m_downHingeActor);
+
+  m_upHingeActor = vtkSmartPointer<vtkActor>::New();
+  m_upHingeActor->GetProperty()->SetColor(0, 0, 1);
+  m_Render->AddActor(m_upHingeActor);
+
+  m_upConnectActor = vtkSmartPointer<vtkActor>::New();
+  m_upConnectActor->GetProperty()->SetColor(1, 1, 0);
+  m_Render->AddActor(m_upConnectActor);
+
   m_StrechWidget = new NormalWidget(0, m_Render);
   m_StrechWidget->hide();
+
+  m_SurfaceForm = new SurfaceFormWidget(0, m_Render);
+  m_HingeShape = new TopoDS_HShape();
+  m_downHingeSurface = new TopoDS_HShape();
+  m_upHingeSurface = new TopoDS_HShape();
+
+  for (int i = 0; i < 3; i++) {
+    m_UpDirection[i] = 0;
+    m_DownDirection[i] = 0;
+  }
   this->CollectionOfConnect();
+
+  //
+  m_upOffSetUp = new TopoDS_HShape();
+  m_upOffSetDown = new TopoDS_HShape();
+
+  m_downOffSetUp = new TopoDS_HShape();
+  m_downOffSetDown = new TopoDS_HShape();
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -39,20 +72,29 @@ void MainWindow::CollectionOfConnect() {
   QAction *deleteModelAction = new QAction(tr("Delete"), m_ModelRightMenu);
   QAction *strechModelAction = new QAction(tr("Strech"), m_ModelRightMenu);
   QAction *saveModelAction = new QAction(tr("Save"), m_ModelRightMenu);
+  QAction *surfaceFormAction =
+      new QAction(tr("Surface Form"), m_ModelRightMenu);
+
   m_ModelRightMenu->addAction(deleteModelAction);
   m_ModelRightMenu->addAction(strechModelAction);
   m_ModelRightMenu->addAction(saveModelAction);
+  m_ModelRightMenu->addAction(surfaceFormAction);
   connect(deleteModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnDeleteModel()));
   connect(strechModelAction, SIGNAL(triggered(bool)), this,
           SLOT(OnStrechTopo_Shape()));
   connect(saveModelAction, SIGNAL(triggered(bool)), this, SLOT(OnSaveModel()));
+  connect(surfaceFormAction, SIGNAL(triggered(bool)), this,
+          SLOT(OnSurfaceForm()));
+
   connect(ui->ViewWidget, SIGNAL(endBSplineCurve()), this,
           SLOT(OnDrawBSplineCurve()));
   connect(ui->ViewWidget, SIGNAL(endSelectLoop()), this,
           SLOT(OnSelectPolyData()));
   connect(ui->ViewWidget, SIGNAL(endPickPoint()), this,
           SLOT(OnEndPickBasePoint()));
+  connect(ui->ViewWidget, SIGNAL(endSurfaceFormPick()), this,
+          SLOT(OnSetSurfaceFormPoints()));
   //  double pt1[3] = {-154.15, -117.03, 1122.21};
   //  double pt2[3] = {-171.63, -109.71, 932.34};
   //  double dis;
@@ -64,12 +106,25 @@ void MainWindow::CollectionOfConnect() {
 
   connect(m_StrechWidget, SIGNAL(startArcCut()), this, SLOT(OnStartArcCut()));
   connect(m_StrechWidget, SIGNAL(cancleArcCut()), this, SLOT(OnCancleArcCut()));
+  connect(m_SurfaceForm, SIGNAL(pickTwoPoint()), ui->ViewWidget,
+          SLOT(OnPickSurfaceForm()));
+  connect(m_SurfaceForm, SIGNAL(canclePick()), ui->ViewWidget,
+          SLOT(OnCanclePickSurfaceForm()));
   connect(ui->ViewWidget, SIGNAL(endArcCut()), this, SLOT(OnEndArcCut()));
 
   connect(ui->UpDateHingeButton, SIGNAL(clicked(bool)), this,
           SLOT(OnUpDateHingeButton()));
   connect(ui->PositionHingeSlider, SIGNAL(valueChanged(int)), this,
           SLOT(OnUpDateHingeButton()));
+  connect(ui->AddToModelButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnAddToModel()));
+
+  connect(ui->ConnectDownButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnConnectDown()));
+  connect(ui->ConnectUpButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnConnectUp()));
+  connect(ui->HingeVisibilityButton, SIGNAL(clicked(bool)), this,
+          SLOT(Onvisibility()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -184,6 +239,22 @@ void MainWindow::OnImportSTL() {
       new ModelItem(this, m_Render, modelName, stlReader->GetOutput());
   m_ModelList.append(item);
 
+  this->AddModelItem(m_ModelList.last());
+}
+
+void MainWindow::OnAddToModel() {
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  pd->DeepCopy(m_HingeActor->GetMapper()->GetInput());
+  if (pd->GetNumberOfPoints() == 0)
+    return;
+
+  QTime time = QTime::currentTime();
+  QString modelName = "Hinge-" + QString::number(time.hour()) + "-" +
+                      QString::number(time.minute()) + "-" +
+                      QString::number(time.second());
+  ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+  m_ModelList.append(item);
+  item->SetTopoDS_Shape(m_HingeShape->Shape());
   this->AddModelItem(m_ModelList.last());
 }
 
@@ -481,6 +552,14 @@ void MainWindow::OnUpDateHingeButton() {
   double crossDirection[3];
   vtkMath::Perpendiculars(directionHinge, crossDirection, NULL,
                           vtkMath::Pi() * ui->StartCutSpinBox->value() / 180.0);
+  auto transform = vtkSmartPointer<vtkTransform>::New();
+  transform->RotateWXYZ(ui->EndCutSpinBox->value(), directionHinge);
+  transform->Update();
+  for (int i = 0; i < 3; i++) {
+    m_UpDirection[i] =
+        transform->TransformDoubleVector(crossDirection)[i] + crossDirection[i];
+  }
+  vtkMath::Normalize(m_UpDirection);
 
   double radialPoint1[3], radiaPoint2[3];
   for (int i = 0; i < 3; i++) {
@@ -527,7 +606,33 @@ void MainWindow::OnUpDateHingeButton() {
   BRepPrimAPI_MakeRevol revol(aFace, axis);
   revol.Build();
   TopoDS_Shape aSolid = revol.Shape();
+  // for connect begin
+  double rotateAngle =
+      vtkMath::Pi() * (360 - ui->EndCutSpinBox->value()) / 180.0;
+  gp_Trsf uprotate;
+  uprotate.SetRotation(axis, -rotateAngle);
+  gp_Pnt rp3 = p3.Transformed(uprotate);
+  gp_Pnt rp4 = p4.Transformed(uprotate);
 
+  m_upHingeCenter[0] = (p4.X() + p3.X() + rp4.X() + rp3.X()) / 4;
+  m_upHingeCenter[1] = (p4.Y() + p3.Y() + rp4.Y() + rp3.Y()) / 4;
+  m_upHingeCenter[2] = (p4.Z() + p3.Z() + rp4.Z() + rp3.Z()) / 4;
+
+  TopoDS_Edge uphingeEdge1 = BRepBuilderAPI_MakeEdge(p4, p3);
+  TopoDS_Edge uphingeEdge2 = BRepBuilderAPI_MakeEdge(p3, rp3);
+  TopoDS_Edge uphingeEdge3 = BRepBuilderAPI_MakeEdge(rp3, rp4);
+  TopoDS_Edge uphingeEdge4 = BRepBuilderAPI_MakeEdge(rp4, p4);
+  TopoDS_Wire uphingeWire = BRepBuilderAPI_MakeWire(uphingeEdge1, uphingeEdge2,
+                                                    uphingeEdge3, uphingeEdge4);
+  m_upHingeSurface->Shape(uphingeWire);
+  auto uppd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(uphingeWire, uppd);
+  auto upmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  upmapper->SetInputData(uppd);
+  m_upHingeActor->SetMapper(upmapper);
+  m_Render->GetRenderWindow()->Render();
+
+  // for connect end
   double cutSection[8][3];
   double cutThickness, cutHeight;
   cutThickness = ui->CutThickSpinBox->value();
@@ -596,6 +701,16 @@ void MainWindow::OnUpDateHingeButton() {
                           vtkMath::Pi() * ui->StartMoveSpinBox->value() /
                               180.0);
 
+  auto transform1 = vtkSmartPointer<vtkTransform>::New();
+  transform1->RotateWXYZ(ui->EndMoveSpinBox->value(), directionHinge);
+  transform1->Update();
+  for (int i = 0; i < 3; i++) {
+    m_DownDirection[i] =
+        transform1->TransformDoubleVector(moveCrossDirection)[i] +
+        moveCrossDirection[i];
+  }
+
+  m_SurfaceForm->SetDirection(m_UpDirection, m_DownDirection);
   for (int i = 0; i < 3; i++) {
     moveRadialPoint[i] =
         positionHinge[i] +
@@ -662,10 +777,242 @@ void MainWindow::OnUpDateHingeButton() {
   TopoDS_Shape moveSolid = moveRevol.Shape();
   TopoDS_Shape withMove = BRepAlgoAPI_Fuse(withCut, moveSolid);
 
+  m_HingeShape->Shape(withMove);
   auto pd = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(withMove, pd);
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputData(pd);
   m_HingeActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
+
+  BRepPrimAPI_MakeRevol downRevol(moveEdge3, axis, moveAngle);
+  downRevol.Build();
+  TopoDS_Shape downhinge = downRevol.Shape();
+  m_downHingeSurface->Shape(downhinge);
+
+  gp_Trsf t;
+  t.SetRotation(axis, moveAngle);
+  gp_Pnt tp4 = moveP4.Transformed(t);
+  gp_Pnt tp5 = moveP5.Transformed(t);
+
+  m_downHingeCenter[0] = (moveP4.X() + tp4.X() + tp5.X() + moveP5.X()) / 4;
+  m_downHingeCenter[1] = (moveP4.Y() + tp4.Y() + tp5.Y() + moveP5.Y()) / 4;
+  m_downHingeCenter[2] = (moveP4.Z() + tp4.Z() + tp5.Z() + moveP5.Z()) / 4;
+
+  //  TopoDS_Edge downhingeEdge1 = BRepBuilderAPI_MakeEdge(tp4, moveP4);
+  //  TopoDS_Edge downhingeEdge2 = BRepBuilderAPI_MakeEdge(moveP4, moveP5);
+  //  TopoDS_Edge downhingeEdge3 = BRepBuilderAPI_MakeEdge(moveP5, tp5);
+  //  TopoDS_Edge downhingeEdge4 = BRepBuilderAPI_MakeEdge(tp5, tp4);
+
+  //  TopoDS_Edge downhingeEdge1 = BRepBuilderAPI_MakeEdge(moveP4, moveP5);
+  //  TopoDS_Edge downhingeEdge2 = BRepBuilderAPI_MakeEdge(moveP5, tp5);
+  //  TopoDS_Edge downhingeEdge3 = BRepBuilderAPI_MakeEdge(tp5, tp4);
+  //  TopoDS_Edge downhingeEdge4 = BRepBuilderAPI_MakeEdge(tp4, moveP4);
+
+  //  TopoDS_Edge downhingeEdge1 = BRepBuilderAPI_MakeEdge(moveP5, tp5);
+  //  TopoDS_Edge downhingeEdge2 = BRepBuilderAPI_MakeEdge(tp5, tp4);
+  //  TopoDS_Edge downhingeEdge3 = BRepBuilderAPI_MakeEdge(tp4, moveP4);
+  //  TopoDS_Edge downhingeEdge4 = BRepBuilderAPI_MakeEdge(moveP4, moveP5);
+
+  TopoDS_Edge downhingeEdge1 = BRepBuilderAPI_MakeEdge(tp5, tp4);
+  TopoDS_Edge downhingeEdge2 = BRepBuilderAPI_MakeEdge(tp4, moveP4);
+  TopoDS_Edge downhingeEdge3 = BRepBuilderAPI_MakeEdge(moveP4, moveP5);
+  TopoDS_Edge downhingeEdge4 = BRepBuilderAPI_MakeEdge(moveP5, tp5);
+  TopoDS_Wire downhingeWire = BRepBuilderAPI_MakeWire(
+      downhingeEdge1, downhingeEdge2, downhingeEdge3, downhingeEdge4);
+
+  m_downHingeSurface->Shape(downhingeWire);
+  auto downpd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(downhingeWire, downpd);
+  auto downmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  downmapper->SetInputData(downpd);
+  m_downHingeActor->SetMapper(downmapper);
+  m_Render->GetRenderWindow()->Render();
+  //  STEPControl_Writer aWriter;
+  //  IFSelect_ReturnStatus aStat = aWriter.Transfer(withMove,
+  //  STEPControl_AsIs);
+  //  aStat = aWriter.Write("res.stp");
+  //  if (aStat != IFSelect_RetDone)
+  //    cout << "Writing error" << endl;
+}
+
+void MainWindow::OnSurfaceForm() {
+  m_SurfaceForm->SetCutData(m_ModelList.at(m_SelectItemIndex)->GetModelData());
+  m_SurfaceForm->show();
+  m_SurfaceForm->SetDirection(m_UpDirection, m_DownDirection);
+}
+
+void MainWindow::OnSetSurfaceFormPoints() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+  double firstPt[3], secondPt[3];
+  points->GetPoint(0, firstPt);
+  points->GetPoint(1, secondPt);
+  m_SurfaceForm->SetStartPos(firstPt);
+  m_SurfaceForm->SetEndPos(secondPt);
+}
+
+void MainWindow::Onvisibility() {
+  bool visibility = m_HingeActor->GetVisibility();
+  if (visibility) {
+    m_HingeActor->VisibilityOff();
+  } else
+    m_HingeActor->VisibilityOn();
+  m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnConnectDown() {
+  TopoDS_Shape upoffset = m_SurfaceForm->GetDownOffSetUp()->Shape();
+  m_downOffSetUp->Shape(upoffset);
+  TopoDS_Shape downoffset = m_SurfaceForm->GetDownOffSetDown()->Shape();
+  m_downOffSetDown->Shape(downoffset);
+  TopoDS_Shape downshape = m_SurfaceForm->GetDownHingeSurface()->Shape();
+  TopoDS_Shape downhinge = m_downHingeSurface->Shape();
+
+  TopoDS_Wire wdownhinge = TopoDS::Wire(downhinge);
+
+  gp_Pnt dwp1(m_SurfaceForm->m_DownWirePoints[0][0],
+              m_SurfaceForm->m_DownWirePoints[0][1],
+              m_SurfaceForm->m_DownWirePoints[0][2]);
+  gp_Pnt dwp2(m_SurfaceForm->m_DownWirePoints[1][0],
+              m_SurfaceForm->m_DownWirePoints[1][1],
+              m_SurfaceForm->m_DownWirePoints[1][2]);
+  gp_Pnt dwp3(m_SurfaceForm->m_DownWirePoints[2][0],
+              m_SurfaceForm->m_DownWirePoints[2][1],
+              m_SurfaceForm->m_DownWirePoints[2][2]);
+  gp_Pnt dwp4(m_SurfaceForm->m_DownWirePoints[3][0],
+              m_SurfaceForm->m_DownWirePoints[3][1],
+              m_SurfaceForm->m_DownWirePoints[3][2]);
+  TopoDS_Edge dwedge1 = BRepBuilderAPI_MakeEdge(dwp1, dwp2);
+  TopoDS_Edge dwedge2 = BRepBuilderAPI_MakeEdge(dwp2, dwp3);
+  TopoDS_Edge dwedge3 = BRepBuilderAPI_MakeEdge(dwp3, dwp1);
+
+  TopoDS_Edge dwedge4 = BRepBuilderAPI_MakeEdge(dwp1, dwp3);
+  TopoDS_Edge dwedge5 = BRepBuilderAPI_MakeEdge(dwp3, dwp4);
+  TopoDS_Edge dwedge6 = BRepBuilderAPI_MakeEdge(dwp4, dwp1);
+  TopoDS_Wire wdownshape1 = BRepBuilderAPI_MakeWire(dwedge1, dwedge2, dwedge3);
+  TopoDS_Wire wdownshape2 = BRepBuilderAPI_MakeWire(dwedge4, dwedge5, dwedge6);
+  TopoDS_Shape fdownhinge = BRepBuilderAPI_MakeFace(wdownhinge);
+  TopoDS_Shape fdownshape1 = BRepBuilderAPI_MakeFace(wdownshape1);
+  TopoDS_Shape fdownshape2 = BRepBuilderAPI_MakeFace(wdownshape2);
+  // begin define path
+  double p1[3], p2[3], p3[3], p4[3];
+  m_SurfaceForm->GetDownCenter(p4);
+  for (int i = 0; i < 3; i++) {
+    p1[i] = m_downHingeCenter[i];
+    p2[i] = p1[i] + 2 * m_DownDirection[i];
+    p3[i] = p4[i] + m_SurfaceForm->m_DownWireDir[i] * 15;
+  }
+  gp_Pnt pathP1(p1[0], p1[1], p1[2]);
+  gp_Pnt pathP2(p2[0], p2[1], p2[2]);
+  gp_Pnt pathP3(p3[0], p3[1], p3[2]);
+  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 3);
+  bsplinePoints->SetValue(1, pathP1);
+  bsplinePoints->SetValue(2, pathP2);
+  bsplinePoints->SetValue(3, pathP3);
+  GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
+  interp.Perform();
+  Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
+  TopoDS_Edge pathedge1 = BRepBuilderAPI_MakeEdge(bsplineCurve);
+  TopoDS_Wire pathwire = BRepBuilderAPI_MakeWire(pathedge1);
+  // end define path
+
+  BRepOffsetAPI_MakePipeShell piper(pathwire);
+  piper.Add(downshape);
+  piper.Add(downhinge);
+  piper.Build();
+  piper.MakeSolid();
+
+  TopoDS_Shape piperesult = piper.Shape();
+  BRepBuilderAPI_Sewing sewing;
+  sewing.Add(piperesult);
+  sewing.Add(fdownhinge);
+  sewing.Add(fdownshape1);
+  sewing.Add(fdownshape2);
+  sewing.Perform();
+
+  TopoDS_Shell sewingShell = TopoDS::Shell(sewing.SewedShape());
+  TopoDS_Solid solidhandle = BRepBuilderAPI_MakeSolid(sewingShell);
+  BRepAlgoAPI_Cut booleanCutter(solidhandle, downoffset);
+  booleanCutter.Build();
+  TopoDS_Shape aftercut = booleanCutter.Shape();
+
+  BRepAlgoAPI_Fuse booleanFuseer(aftercut, upoffset);
+  booleanFuseer.Build();
+  TopoDS_Shape afterfuse = booleanFuseer.Shape();
+  auto pipepd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterfuse, pipepd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(pipepd);
+  m_downConnectActor->SetMapper(mapper);
+
+  m_SurfaceForm->SetDownVisibility(false);
+  m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnConnectUp() {
+  TopoDS_Shape upoffset = m_SurfaceForm->GetUpOffSetUp()->Shape();
+  m_upOffSetUp->Shape(upoffset);
+  TopoDS_Shape downoffset = m_SurfaceForm->GetUpOffSetDown()->Shape();
+  m_upOffSetDown->Shape(downoffset);
+
+  TopoDS_Shape upshape = m_SurfaceForm->GetUpHingeSurface()->Shape();
+  TopoDS_Shape uphinge = m_upHingeSurface->Shape();
+
+  double p1[3], p2[3], p3[3], p4[3], p5[3];
+
+  m_SurfaceForm->GetUpCenter(p5);
+
+  for (int i = 0; i < 3; i++) {
+    p1[i] = m_upHingeCenter[i];
+    p2[i] = p1[i] + 2 * m_UpDirection[i];
+    p3[i] = (p1[i] + p5[i]) / 2;
+    p4[i] = (p3[i] + p5[i]) / 2 + 2 * m_UpDirection[i];
+  }
+
+  gp_Pnt pathP1(p1[0], p1[1], p1[2]);
+  gp_Pnt pathP2(p2[0], p2[1], p2[2]);
+  gp_Pnt pathP3(p3[0], p3[1], p3[2]);
+  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
+  gp_Pnt pathP5(p5[0], p5[1], p5[2]);
+
+  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 5);
+
+  bsplinePoints->SetValue(1, pathP1);
+  bsplinePoints->SetValue(2, pathP2);
+  bsplinePoints->SetValue(3, pathP3);
+  bsplinePoints->SetValue(4, pathP4);
+  bsplinePoints->SetValue(5, pathP5);
+  GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
+  interp.Perform();
+  Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
+  TopoDS_Edge pathedge1 = BRepBuilderAPI_MakeEdge(bsplineCurve);
+  // TopoDS_Edge pathedge1 = BRepBuilderAPI_MakeEdge(pathP1, pathP5);
+  TopoDS_Wire pathwire = BRepBuilderAPI_MakeWire(pathedge1);
+  // upshape.Reverse();
+
+  //  gp_Vec vc(pathP1, pathP5);
+  //  gp_Trsf t;
+  //  t.SetTranslation(vc);
+  //  TopLoc_Location lc(t);
+  //  TopoDS_Shape tshape = uphinge.Moved(lc);
+  BRepOffsetAPI_MakePipeShell piper(pathwire);
+  piper.Add(upshape);
+  piper.Add(uphinge);
+
+  piper.Build();
+  piper.MakeSolid();
+  TopoDS_Shape piperesult = piper.Shape();
+  BRepAlgoAPI_Cut booleanCutter(piperesult, downoffset);
+  booleanCutter.Build();
+  piperesult = booleanCutter.Shape();
+
+  auto pipepd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(piperesult, pipepd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(pipepd);
+  m_upConnectActor->SetMapper(mapper);
+
+  m_SurfaceForm->SetUpVisibility(false);
   m_Render->GetRenderWindow()->Render();
 }

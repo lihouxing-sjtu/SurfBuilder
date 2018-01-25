@@ -28,7 +28,8 @@ SOURCES += \
         MainWindow.cpp \
     CustomViewWidget.cpp \
     ModelItem.cpp \
-    NormalWidget.cpp
+    NormalWidget.cpp \
+    SurfaceFormWidget.cpp
 
 HEADERS += \
         MainWindow.h \
@@ -36,14 +37,16 @@ HEADERS += \
     stdafx.h \
     CustomViewWidget.h \
     ModelItem.h \
-    NormalWidget.h
+    NormalWidget.h \
+    SurfaceFormWidget.h
 
 RESOURCES +=resource.qrc
 
 FORMS += \
         MainWindow.ui \
     CustomViewWidget.ui \
-    NormalWidget.ui
+    NormalWidget.ui \
+    SurfaceFormWidget.ui
 
 INCLUDEPATH+=C:\Environment\VTK\Install\Vs2015-qt590-vtk801\include\vtk-8.0       \
                             C:\Environment\opencascad\instal\OCCT\inc

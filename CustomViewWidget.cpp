@@ -173,7 +173,7 @@ void CustomViewWidget::GetPickPoint(double inputpt[2], double outputpt[3]) {
 
 void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   if (m_pickState == None) {
-    QWidget::mouseDoubleClickEvent(event);
+    QVTKWidget::mouseDoubleClickEvent(event);
     return;
   }
   double displayPos[2];
@@ -182,11 +182,13 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   double pickedPos[3];
   this->GetPickPoint(displayPos, pickedPos);
   m_pickedPoints->InsertNextPoint(pickedPos);
+
   auto sphere = vtkSmartPointer<vtkSphereSource>::New();
   sphere->SetCenter(pickedPos);
   sphere->SetRadius(1);
   sphere->SetPhiResolution(20);
   sphere->Update();
+
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputData(sphere->GetOutput());
   auto actor = vtkSmartPointer<vtkActor>::New();
@@ -194,12 +196,20 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   actor->GetProperty()->SetColor(0.3, 0.5, 0.8);
   m_RenderRen->AddActor(actor);
   m_pickSpheres.append(actor);
-  QWidget::mouseDoubleClickEvent(event);
+  QVTKWidget::mouseDoubleClickEvent(event);
   if (m_pickState == PickPoint)
     OnEndPickPoint();
   if (m_pickState == ArcCut) {
     if (m_pickedPoints->GetNumberOfPoints() == 4)
       endArcCutPoints();
+  }
+  if (m_pickState == pickForSurfaceForm) {
+    if (m_pickedPoints->GetNumberOfPoints() == 2) {
+      m_pickState = None;
+      this->setCursor(Qt::ArrowCursor);
+      qDebug() << "end pick";
+      emit endSurfaceFormPick();
+    }
   }
 }
 
@@ -210,7 +220,7 @@ void CustomViewWidget::keyPressEvent(QKeyEvent *event) {
   }
   if (event->key() == Qt::Key_F1)
     m_keyState = F1;
-  QWidget::keyPressEvent(event);
+  QVTKWidget::keyPressEvent(event);
 }
 
 void CustomViewWidget::keyReleaseEvent(QKeyEvent *event) {
@@ -218,7 +228,7 @@ void CustomViewWidget::keyReleaseEvent(QKeyEvent *event) {
     m_keyState = Nokey;
     QWidget::keyReleaseEvent(event);
   }
-  QWidget::keyReleaseEvent(event);
+  QVTKWidget::keyReleaseEvent(event);
 }
 
 void CustomViewWidget::mouseMoveEvent(QMouseEvent *event) {
@@ -356,4 +366,22 @@ void CustomViewWidget::OnRemoveLastPoint() {
   m_RenderRen->RemoveActor(m_pickSpheres.last());
   m_pickSpheres.removeLast();
   m_RenderWin->Render();
+}
+
+void CustomViewWidget::OnPickSurfaceForm() {
+  if (m_pickState != None)
+    return;
+  m_pickState = pickForSurfaceForm;
+  this->setCursor(Qt::CrossCursor);
+}
+
+void CustomViewWidget::OnCanclePickSurfaceForm() {
+  if (m_pickState != pickForSurfaceForm)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  foreach (vtkActor *var, m_pickSpheres) { m_RenderRen->RemoveActor(var); }
+  m_pickSpheres.clear();
+  m_pickedPoints->Reset();
+  m_pickedPoints->Initialize();
 }

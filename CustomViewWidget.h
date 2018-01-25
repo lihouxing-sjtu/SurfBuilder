@@ -8,7 +8,14 @@ VTK_MODULE_INIT(vtkRenderingOpenGL2)
 namespace Ui {
 class CustomViewWidget;
 }
-enum pickState { None, BSplineCurve, SelectLoop, PickPoint, ArcCut };
+enum pickState {
+  None,
+  BSplineCurve,
+  SelectLoop,
+  PickPoint,
+  ArcCut,
+  pickForSurfaceForm
+};
 enum keyState { Nokey, F1 };
 class CustomViewWidget : public QVTKWidget {
   Q_OBJECT
@@ -56,6 +63,7 @@ signals:
   void endSelectLoop();
   void endPickPoint();
   void endArcCut();
+  void endSurfaceFormPick();
 protected slots:
   void OnChangeBKColor1();
   void OnChangeBKColor2();
@@ -67,6 +75,8 @@ protected slots:
   void OnEndSelectLoop();
   void OnEndPickPoint();
   void OnRemoveLastPoint();
+  void OnPickSurfaceForm();
+  void OnCanclePickSurfaceForm();
 };
 
 #endif // CUSTOMVIEWWIDGET_H

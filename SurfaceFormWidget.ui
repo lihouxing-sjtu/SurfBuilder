@@ -1,21 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <author/>
- <comment/>
- <exportmacro/>
  <class>SurfaceFormWidget</class>
  <widget class="QWidget" name="SurfaceFormWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>839</width>
+    <height>545</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QRadioButton" name="UpRadioButton">
+       <property name="text">
+        <string>Up</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pickTwoPointsButton">
+       <property name="text">
+        <string>pick </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="ContourNumSpinBox">
+       <property name="prefix">
+        <string>Contour:</string>
+       </property>
+       <property name="minimum">
+        <number>3</number>
+       </property>
+       <property name="value">
+        <number>10</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="SampleNumSpinBox">
+       <property name="prefix">
+        <string>Sample:</string>
+       </property>
+       <property name="minimum">
+        <number>3</number>
+       </property>
+       <property name="value">
+        <number>20</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pickCancleButton">
+       <property name="text">
+        <string>cancle</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="DownRadioButton">
+       <property name="text">
+        <string>Down</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QSpinBox" name="StartPositionSpinBox">
+       <property name="minimum">
+        <number>-99</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSlider" name="StartPositionSlider">
+       <property name="minimum">
+        <number>-99</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSlider" name="EndPositionSlider">
+       <property name="minimum">
+        <number>-99</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="EndPositionSpinBox">
+       <property name="minimum">
+        <number>-99</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="ApplyButton">
+     <property name="text">
+      <string>Apply</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="OffSetDoubleSpinBox">
+       <property name="prefix">
+        <string>OffSet:</string>
+       </property>
+       <property name="suffix">
+        <string/>
+       </property>
+       <property name="value">
+        <double>2.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeRadisDoubleSpinBox">
+       <property name="prefix">
+        <string>Tube R:</string>
+       </property>
+       <property name="value">
+        <double>4.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeSampleSpinBox">
+       <property name="value">
+        <double>2.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="TubeHeightSpinBox">
+       <property name="prefix">
+        <string>Tube H:</string>
+       </property>
+       <property name="value">
+        <number>15</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="FiletRadiusSpinBox">
+       <property name="prefix">
+        <string>Filet R:</string>
+       </property>
+       <property name="value">
+        <double>0.500000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Tube Region:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeMinUDoubleSpinBox">
+       <property name="prefix">
+        <string>Min U:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeMaxUDoubleSpinBox">
+       <property name="prefix">
+        <string>Max U:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeMinVDoubleSpinBox">
+       <property name="prefix">
+        <string>Min V:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="TubeMaxVDoubleSpinBox">
+       <property name="prefix">
+        <string>Max V:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="TubesVisRadioButton">
+       <property name="text">
+        <string>Visibility</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Hinge Region:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="HingeMinUDoubleSpinBox">
+       <property name="prefix">
+        <string>Min U:</string>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="HingeMaxUDoubleSpinBox">
+       <property name="prefix">
+        <string>Max U:</string>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.500000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="HingeMinVDoubleSpinBox">
+       <property name="prefix">
+        <string>Min V:</string>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="HingeMaxVDoubleSpinBox">
+       <property name="prefix">
+        <string>Max V:</string>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.500000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="6" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>188</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
  </widget>
- <pixmapfunction/>
- <connections/>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>StartPositionSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>StartPositionSlider</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>59</x>
+     <y>63</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>170</x>
+     <y>59</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>StartPositionSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>StartPositionSpinBox</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>230</x>
+     <y>59</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>59</x>
+     <y>63</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>EndPositionSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>EndPositionSpinBox</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>438</x>
+     <y>59</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>779</x>
+     <y>63</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>EndPositionSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>EndPositionSlider</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>779</x>
+     <y>63</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>438</x>
+     <y>59</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeMinUDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>140</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeMaxUDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>285</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>507</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeMinVDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>423</x>
+     <y>140</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>507</x>
+     <y>221</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeMaxVDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>560</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>508</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>OffSetDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>183</x>
+     <y>109</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>122</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeRadisDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>289</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>171</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeSampleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>395</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>3</x>
+     <y>206</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>TubeHeightSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>SurfaceFormWidget</receiver>
+   <slot>BuildSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>462</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>BuildSurface()</slot>
+ </slots>
 </ui>
