@@ -125,6 +125,12 @@ void MainWindow::CollectionOfConnect() {
           SLOT(OnConnectUp()));
   connect(ui->HingeVisibilityButton, SIGNAL(clicked(bool)), this,
           SLOT(Onvisibility()));
+  connect(ui->FilletDownButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnFilletDown()));
+  connect(ui->FilletUpButton, SIGNAL(clicked(bool)), this, SLOT(OnFilletUp()));
+
+  connect(ui->TubeDownButton, SIGNAL(clicked(bool)), this, SLOT(OnTubeDown()));
+  connect(ui->TubeUpButton, SIGNAL(clicked(bool)), this, SLOT(OnTubeUp()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -905,7 +911,7 @@ void MainWindow::OnConnectDown() {
   }
   gp_Pnt pathP1(p1[0], p1[1], p1[2]);
   gp_Pnt pathP2(p2[0], p2[1], p2[2]);
-  gp_Pnt pathP3(p3[0], p3[1], p3[2]);
+  gp_Pnt pathP3(p4[0], p4[1], p4[2]);
   Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 3);
   bsplinePoints->SetValue(1, pathP1);
   bsplinePoints->SetValue(2, pathP2);
@@ -940,6 +946,7 @@ void MainWindow::OnConnectDown() {
   BRepAlgoAPI_Fuse booleanFuseer(aftercut, upoffset);
   booleanFuseer.Build();
   TopoDS_Shape afterfuse = booleanFuseer.Shape();
+  m_downOffSetUp->Shape(afterfuse);
   auto pipepd = vtkSmartPointer<vtkPolyData>::New();
   this->ConvertTopoDS2PolyData(afterfuse, pipepd);
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -1015,4 +1022,163 @@ void MainWindow::OnConnectUp() {
 
   m_SurfaceForm->SetUpVisibility(false);
   m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnFilletUp() {
+  TopoDS_Shape forfillet = m_upOffSetUp->Shape();
+  BRepFilletAPI_MakeFillet mf(forfillet);
+  TopExp_Explorer ex(forfillet, TopAbs_EDGE);
+  while (ex.More()) {
+    mf.Add(0.5, TopoDS::Edge(ex.Current()));
+    ex.Next();
+  }
+  if (!mf.IsDone()) {
+    return;
+  }
+  m_upOffSetUp->Shape(mf.Shape());
+  auto filletpd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(m_upOffSetUp->Shape(), filletpd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(filletpd);
+  m_upConnectActor->SetMapper(mapper);
+
+  m_SurfaceForm->SetDownVisibility(false);
+  m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnFilletDown() {
+  TopoDS_Shape forfillet = m_downOffSetUp->Shape();
+  BRepFilletAPI_MakeFillet mf(forfillet);
+  double radius = 0.5;
+  TopExp_Explorer ex(forfillet, TopAbs_EDGE);
+  while (ex.More()) {
+    mf.Add(radius, TopoDS::Edge(ex.Current()));
+    ex.Next();
+  }
+  mf.Build();
+  while (!mf.IsDone()) {
+    qDebug() << "fillet failed";
+    radius = radius - 0.1;
+    if (radius <= 0)
+      return;
+    mf.Reset();
+    while (ex.More()) {
+      mf.Add(radius, TopoDS::Edge(ex.Current()));
+      ex.Next();
+    }
+    mf.Build();
+  }
+  qDebug() << radius;
+  m_downOffSetUp->Shape(mf.Shape());
+  auto filletpd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(m_downOffSetUp->Shape(), filletpd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(filletpd);
+  m_downConnectActor->SetMapper(mapper);
+
+  m_SurfaceForm->SetDownVisibility(false);
+  m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnTubeUp() {}
+
+void MainWindow::OnTubeDown() {
+  // begin build tubes
+
+  double tubeUmin = m_SurfaceForm->m_DownTubeRegion[0];
+  double tubeUmax = m_SurfaceForm->m_DownTubeRegion[1];
+  double tubeVmin = m_SurfaceForm->m_DownTubeRegion[2];
+  double tubeVmax = m_SurfaceForm->m_DownTubeRegion[3];
+
+  double tubeRadius = m_SurfaceForm->m_DownTubeInformation[0];
+  double tubeHeight = m_SurfaceForm->m_DownTubeInformation[1];
+  double tubeSample = m_SurfaceForm->m_DownTubeInformation[2];
+
+  TopoDS_Shape tubesShape;
+  TopoDS_Compound tubesCompound;
+  BRep_Builder compoundBuilder;
+  compoundBuilder.MakeCompound(tubesCompound);
+
+  double fb[4];
+  for (int i = 0; i < 4; i++) {
+    fb[i] = m_SurfaceForm->m_DownWireRegion[i];
+  }
+
+  for (double m = tubeUmin; m < tubeUmax; m = m + tubeSample) {
+    for (double n = tubeVmin; n < tubeVmax; n = n + tubeSample) {
+      double uNormal[3], vNormal[3], direction[3];
+
+      if (m > fb[0] && m < fb[1] && n > fb[2] && n < fb[3])
+        continue;
+      gp_Pnt origion;
+      gp_Vec diu;
+      gp_Vec div;
+      m_SurfaceForm->m_GeomSurfaceDown->D1(m, n, origion, diu, div);
+      uNormal[0] = diu.X();
+      uNormal[1] = diu.Y();
+      uNormal[2] = diu.Z();
+      vtkMath::Normalize(uNormal);
+
+      vNormal[0] = div.X();
+      vNormal[1] = div.Y();
+      vNormal[2] = div.Z();
+      vtkMath::Normalize(vNormal);
+      vtkMath::Cross(uNormal, vNormal, direction);
+
+      double _x = origion.X() - direction[0] * tubeHeight / 2;
+      double _y = origion.Y() - direction[1] * tubeHeight / 2;
+      double _z = origion.Z() - direction[2] * tubeHeight / 2;
+      gp_Pnt center(_x, _y, _z);
+
+      gp_Dir dir(direction[0], direction[1], direction[2]);
+      gp_Ax2 axs(center, dir);
+      TopoDS_Shape prismFace =
+          BRepPrimAPI_MakeCylinder(axs, tubeRadius, tubeHeight);
+      compoundBuilder.Add(tubesCompound, prismFace);
+    }
+  }
+  // end build tubes
+
+  // begin boolean
+  TopoDS_Shape beforetube = m_downOffSetUp->Shape();
+  BRepAlgoAPI_Cut tubecutter(beforetube, tubesCompound);
+  tubecutter.Build();
+  if (!tubecutter.IsDone())
+    return;
+  TopoDS_Shape aftertube = tubecutter.Shape();
+  // begin fillet
+  TopTools_ListOfShape edgesforfillet = tubecutter.SectionEdges();
+  TopTools_ListIteratorOfListOfShape aiterator(edgesforfillet);
+  BRepFilletAPI_MakeFillet mf(aftertube);
+  double radius = 0.5;
+  while (aiterator.More()) {
+    mf.Add(radius, TopoDS::Edge(aiterator.Value()));
+    aiterator.Next();
+  }
+  mf.Build();
+  while (!mf.IsDone()) {
+    qDebug() << "fillet failed";
+    radius = radius - 0.05;
+    if (radius <= 0)
+      return;
+    mf.Reset();
+    while (aiterator.More()) {
+      mf.Add(radius, TopoDS::Edge(aiterator.Value()));
+      aiterator.Next();
+    }
+    mf.Build();
+  }
+  qDebug() << radius;
+  qDebug() << "extend:" << edgesforfillet.Extent();
+  // end fillet
+  TopoDS_Shape afterfillet = mf.Shape();
+  m_downOffSetUp->Shape(afterfillet);
+
+  auto aftertubepd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterfillet, aftertubepd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(aftertubepd);
+  m_downConnectActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
+  m_SurfaceForm->SetTubesVisibility(false);
 }

@@ -95,6 +95,13 @@
           </size>
          </property>
          <layout class="QGridLayout" name="gridLayout_4">
+          <item row="13" column="0">
+           <widget class="QPushButton" name="TubeDownButton">
+            <property name="text">
+             <string>Tube down</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
@@ -219,6 +226,27 @@
             </item>
            </layout>
           </item>
+          <item row="6" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QDoubleSpinBox" name="CutHeightSpinBox">
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="CutThickSpinBox">
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
           <item row="1" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
@@ -296,28 +324,7 @@
             </item>
            </layout>
           </item>
-          <item row="6" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
-            <item>
-             <widget class="QDoubleSpinBox" name="CutHeightSpinBox">
-              <property name="value">
-               <double>5.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QDoubleSpinBox" name="CutThickSpinBox">
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-              <property name="value">
-               <double>5.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="11" column="0">
+          <item row="15" column="0">
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -490,17 +497,38 @@
             </property>
            </widget>
           </item>
+          <item row="12" column="0">
+           <widget class="QPushButton" name="FilletUpButton">
+            <property name="text">
+             <string>Fillet Up</string>
+            </property>
+           </widget>
+          </item>
           <item row="9" column="0">
            <widget class="QPushButton" name="ConnectDownButton">
             <property name="text">
-             <string>Test down</string>
+             <string>Connect down</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="0">
+           <widget class="QPushButton" name="FilletDownButton">
+            <property name="text">
+             <string>Fillet Down</string>
             </property>
            </widget>
           </item>
           <item row="10" column="0">
            <widget class="QPushButton" name="ConnectUpButton">
             <property name="text">
-             <string>Test up</string>
+             <string>Connect up</string>
+            </property>
+           </widget>
+          </item>
+          <item row="14" column="0">
+           <widget class="QPushButton" name="TubeUpButton">
+            <property name="text">
+             <string>Tube up</string>
             </property>
            </widget>
           </item>

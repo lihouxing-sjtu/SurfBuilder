@@ -27,6 +27,8 @@ using namespace std;
 #include <vtkCardinalSpline.h>
 #include <vtkCleanPolyData.h>
 #include <vtkCutter.h>
+#include <vtkDecimatePro.h>
+#include <vtkFlyingEdgesPlaneCutter.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkIntersectionPolyDataFilter.h>

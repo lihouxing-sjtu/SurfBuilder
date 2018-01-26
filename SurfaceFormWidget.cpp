@@ -84,6 +84,17 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(OnBuildHingeRegion()));
   connect(ui->HingeMaxVDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(OnBuildHingeRegion()));
+
+  connect(ui->TubeHeightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(OnBuildTubeRegion()));
+  connect(ui->TubeMaxUDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(OnBuildTubeRegion()));
+  connect(ui->TubeMaxVDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(OnBuildTubeRegion()));
+  connect(ui->TubeMinUDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(OnBuildTubeRegion()));
+  connect(ui->TubeMinVDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(OnBuildTubeRegion()));
 }
 
 SurfaceFormWidget::~SurfaceFormWidget() { delete ui; }
@@ -128,6 +139,7 @@ void SurfaceFormWidget::BuildSurface() {
     auto actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(maper);
     m_Render->AddActor(actor);
+
     if (cutPoints->GetNumberOfPoints() < numOfSamples) {
       qDebug() << cutPoints->GetNumberOfPoints() << numOfSamples;
       return;
@@ -140,6 +152,7 @@ void SurfaceFormWidget::BuildSurface() {
       poles(i + 1, j + 1) = gp_Pnt(pt[0], pt[1], pt[2]);
     }
   }
+
   appd->Update();
   auto mapperContour = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapperContour->SetInputData(appd->GetOutput());
@@ -379,9 +392,11 @@ void SurfaceFormWidget::GetContourPoints(vtkPolyData *inputData, int sampleNum,
   vtkMath::Normalize(direction2_m);
 
   double updirection[3];
+  double cupdirection[3];
+  vtkMath::Cross(direction1_m, m_DownDirection, cupdirection);
   vtkMath::Cross(m_UpDirection, m_DownDirection, updirection);
   double upangle = vtkMath::DegreesFromRadians(
-      vtkMath::AngleBetweenVectors(updirection, direction1_m));
+      vtkMath::AngleBetweenVectors(updirection, cupdirection));
   if (upangle > 90) {
     int numofpoints = testpoints->GetNumberOfPoints();
     auto newtestpoints = vtkSmartPointer<vtkPoints>::New();
@@ -486,6 +501,10 @@ void SurfaceFormWidget::OnBuildHingeRegion() {
   gp_Pnt gp1, gp2, gp3, gp4;
 
   if (ui->DownRadioButton->isChecked()) {
+    m_DownWireRegion[0] = umin;
+    m_DownWireRegion[1] = umax;
+    m_DownWireRegion[2] = vmin;
+    m_DownWireRegion[3] = vmax;
     double p1[3], p2[3], p3[3], p4[3];
     gp1 = m_GeomSurfaceDown->Value(umin, vmin);
     gp2 = m_GeomSurfaceDown->Value(umin, vmax);
@@ -540,6 +559,85 @@ void SurfaceFormWidget::OnBuildHingeRegion() {
   m_Render->GetRenderWindow()->Render();
 }
 
+void SurfaceFormWidget::OnBuildTubeRegion() {
+  double tubeUmin = ui->TubeMinUDoubleSpinBox->value();
+  double tubeUmax = ui->TubeMaxUDoubleSpinBox->value();
+
+  double tubeVmin = ui->TubeMinVDoubleSpinBox->value();
+  double tubeVmax = ui->TubeMaxVDoubleSpinBox->value();
+
+  double tubeRadius = ui->TubeRadisDoubleSpinBox->value();
+  double tubeHeight = ui->TubeHeightSpinBox->value();
+
+  double tubeSample = ui->TubeSampleSpinBox->value();
+
+  m_DownTubeRegion[0] = tubeUmin;
+  m_DownTubeRegion[1] = tubeUmax;
+  m_DownTubeRegion[2] = tubeVmin;
+  m_DownTubeRegion[3] = tubeVmax;
+
+  m_DownTubeInformation[0] = tubeRadius;
+  m_DownTubeInformation[1] = tubeHeight;
+  m_DownTubeInformation[2] = tubeSample;
+
+  TopoDS_Shape tubesShape;
+  TopoDS_Compound tubesCompound;
+  BRep_Builder compoundBuilder;
+  compoundBuilder.MakeCompound(tubesCompound);
+
+  for (double m = tubeUmin; m < tubeUmax; m = m + tubeSample) {
+    for (double n = tubeVmin; n < tubeVmax; n = n + tubeSample) {
+      double uNormal[3], vNormal[3], direction[3];
+
+      gp_Pnt origion;
+      gp_Vec diu;
+      gp_Vec div;
+      if (ui->DownRadioButton->isChecked())
+        m_GeomSurfaceDown->D1(m, n, origion, diu, div);
+      else
+        m_GeomSurfaceUp->D1(m, n, origion, diu, div);
+      uNormal[0] = diu.X();
+      uNormal[1] = diu.Y();
+      uNormal[2] = diu.Z();
+      vtkMath::Normalize(uNormal);
+
+      vNormal[0] = div.X();
+      vNormal[1] = div.Y();
+      vNormal[2] = div.Z();
+      vtkMath::Normalize(vNormal);
+      vtkMath::Cross(uNormal, vNormal, direction);
+
+      double _x = origion.X() - direction[0] * tubeHeight / 2;
+      double _y = origion.Y() - direction[1] * tubeHeight / 2;
+      double _z = origion.Z() - direction[2] * tubeHeight / 2;
+      gp_Pnt center(_x, _y, _z);
+
+      gp_Dir dir(direction[0], direction[1], direction[2]);
+      gp_Ax2 axs(center, dir);
+      TopoDS_Shape prismFace =
+          BRepPrimAPI_MakeCylinder(axs, tubeRadius, tubeHeight);
+      //      GC_MakeCircle circle(center, dir, tubeRadius);
+      //      BRepBuilderAPI_MakeEdge circleEge(circle.Value());
+      //      TopoDS_Edge circleShape = circleEge.Edge();
+      //      BRepBuilderAPI_MakeWire circleWire(circleShape);
+      //      BRepBuilderAPI_MakeFace circleFace(circleWire.Wire());
+      //      gp_Vec v1 = dir;
+      //      v1.Scale(tubeHeight);
+      //      TopoDS_Shape prismFace = BRepPrimAPI_MakePrism(circleFace,
+      //      v1).Shape();
+      compoundBuilder.Add(tubesCompound, prismFace);
+    }
+  }
+  auto tubepd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(tubesCompound, tubepd);
+  auto tubemapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  tubemapper->SetInputData(tubepd);
+
+  m_TubesActor->SetMapper(tubemapper);
+  m_Render->GetRenderWindow()->Render();
+  qDebug() << "tubes";
+}
+
 void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
   clean->SetInputData(data);
@@ -552,7 +650,11 @@ void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   normalFilter->ComputeCellNormalsOn();
   normalFilter->ComputePointNormalsOn();
   normalFilter->Update();
-  m_ForCutData->DeepCopy(normalFilter->GetOutput());
+  auto decim = vtkSmartPointer<vtkDecimatePro>::New();
+  decim->SetInputData(normalFilter->GetOutput());
+  decim->SetTargetReduction(0.8);
+  decim->Update();
+  m_ForCutData->DeepCopy(decim->GetOutput());
 }
 
 void SurfaceFormWidget::SetDirection(double *updir, double *downdir) {
@@ -604,6 +706,11 @@ void SurfaceFormWidget::SetDownVisibility(bool vi) {
 
 void SurfaceFormWidget::SetUpVisibility(bool vi) {
   m_UpOffSetUpActor->SetVisibility(vi);
+  m_Render->GetRenderWindow()->Render();
+}
+
+void SurfaceFormWidget::SetTubesVisibility(bool vi) {
+  m_TubesActor->SetVisibility(vi);
   m_Render->GetRenderWindow()->Render();
 }
 

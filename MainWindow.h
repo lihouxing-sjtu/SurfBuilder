@@ -84,6 +84,10 @@ protected slots:
   void Onvisibility();
   void OnConnectDown();
   void OnConnectUp();
+  void OnFilletUp();
+  void OnFilletDown();
+  void OnTubeUp();
+  void OnTubeDown();
 };
 
 #endif // MAINWINDOW_H

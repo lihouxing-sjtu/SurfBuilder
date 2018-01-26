@@ -30,8 +30,16 @@ public:
   Handle(TopoDS_HShape) GetDownOffSetDown();
   void SetDownVisibility(bool vi);
   void SetUpVisibility(bool vi);
+  void SetTubesVisibility(bool vi);
   double m_DownWireDir[3];
   double m_DownWirePoints[4][3];
+  double m_UpWirePoints[4][3];
+
+  double m_DownWireRegion[4];
+  double m_DownTubeRegion[4];
+  double m_DownTubeInformation[3];
+  Handle(Geom_Surface) m_GeomSurfaceDown;
+  Handle(Geom_Surface) m_GeomSurfaceUp;
 
 private:
   Ui::SurfaceFormWidget *ui;
@@ -53,8 +61,7 @@ private:
 
   Handle(TopoDS_HShape) m_DownHingeSurface;
   Handle(TopoDS_HShape) m_UpHingeSurface;
-  Handle(Geom_Surface) m_GeomSurfaceDown;
-  Handle(Geom_Surface) m_GeomSurfaceUp;
+
   Handle(TopoDS_HShape) m_DownOffSetUp;
   Handle(TopoDS_HShape) m_DownOffSetDown;
 
@@ -92,6 +99,7 @@ protected slots:
   void OnTubesVisibility();
 
   void OnBuildHingeRegion();
+  void OnBuildTubeRegion();
 };
 
 #endif // SURFACEFORMWIDGET_H
