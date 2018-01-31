@@ -131,6 +131,9 @@ void MainWindow::CollectionOfConnect() {
 
   connect(ui->TubeDownButton, SIGNAL(clicked(bool)), this, SLOT(OnTubeDown()));
   connect(ui->TubeUpButton, SIGNAL(clicked(bool)), this, SLOT(OnTubeUp()));
+
+  connect(ui->BeltDownButton, SIGNAL(clicked(bool)), this, SLOT(OnBeltDown()));
+  connect(ui->BeltUpButton, SIGNAL(clicked(bool)), this, SLOT(OnBeltUp()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -876,6 +879,7 @@ void MainWindow::OnConnectDown() {
   TopoDS_Shape downhinge = m_downHingeSurface->Shape();
 
   TopoDS_Wire wdownhinge = TopoDS::Wire(downhinge);
+  TopoDS_Shape fdownhinge = BRepBuilderAPI_MakeFace(wdownhinge);
 
   gp_Pnt dwp1(m_SurfaceForm->m_DownWirePoints[0][0],
               m_SurfaceForm->m_DownWirePoints[0][1],
@@ -896,9 +900,10 @@ void MainWindow::OnConnectDown() {
   TopoDS_Edge dwedge4 = BRepBuilderAPI_MakeEdge(dwp1, dwp3);
   TopoDS_Edge dwedge5 = BRepBuilderAPI_MakeEdge(dwp3, dwp4);
   TopoDS_Edge dwedge6 = BRepBuilderAPI_MakeEdge(dwp4, dwp1);
+
   TopoDS_Wire wdownshape1 = BRepBuilderAPI_MakeWire(dwedge1, dwedge2, dwedge3);
   TopoDS_Wire wdownshape2 = BRepBuilderAPI_MakeWire(dwedge4, dwedge5, dwedge6);
-  TopoDS_Shape fdownhinge = BRepBuilderAPI_MakeFace(wdownhinge);
+
   TopoDS_Shape fdownshape1 = BRepBuilderAPI_MakeFace(wdownshape1);
   TopoDS_Shape fdownshape2 = BRepBuilderAPI_MakeFace(wdownshape2);
   // begin define path
@@ -940,10 +945,12 @@ void MainWindow::OnConnectDown() {
   TopoDS_Shell sewingShell = TopoDS::Shell(sewing.SewedShape());
   TopoDS_Solid solidhandle = BRepBuilderAPI_MakeSolid(sewingShell);
   BRepAlgoAPI_Cut booleanCutter(solidhandle, downoffset);
+  booleanCutter.SetRunParallel(1);
   booleanCutter.Build();
   TopoDS_Shape aftercut = booleanCutter.Shape();
 
   BRepAlgoAPI_Fuse booleanFuseer(aftercut, upoffset);
+  booleanFuseer.SetRunParallel(1);
   booleanFuseer.Build();
   TopoDS_Shape afterfuse = booleanFuseer.Shape();
   m_downOffSetUp->Shape(afterfuse);
@@ -966,56 +973,102 @@ void MainWindow::OnConnectUp() {
   TopoDS_Shape upshape = m_SurfaceForm->GetUpHingeSurface()->Shape();
   TopoDS_Shape uphinge = m_upHingeSurface->Shape();
 
+  TopoDS_Wire wuphinge = TopoDS::Wire(uphinge);
+  TopoDS_Shape fuphinge = BRepBuilderAPI_MakeFace(wuphinge);
+
+  gp_Pnt uwp1(m_SurfaceForm->m_UpWirePoints[0][0],
+              m_SurfaceForm->m_UpWirePoints[0][1],
+              m_SurfaceForm->m_UpWirePoints[0][2]);
+
+  gp_Pnt uwp2(m_SurfaceForm->m_UpWirePoints[1][0],
+              m_SurfaceForm->m_UpWirePoints[1][1],
+              m_SurfaceForm->m_UpWirePoints[1][2]);
+
+  gp_Pnt uwp3(m_SurfaceForm->m_UpWirePoints[2][0],
+              m_SurfaceForm->m_UpWirePoints[2][1],
+              m_SurfaceForm->m_UpWirePoints[2][2]);
+
+  gp_Pnt uwp4(m_SurfaceForm->m_UpWirePoints[3][0],
+              m_SurfaceForm->m_UpWirePoints[3][1],
+              m_SurfaceForm->m_UpWirePoints[3][2]);
+  TopoDS_Edge uwedge1 = BRepBuilderAPI_MakeEdge(uwp1, uwp2);
+  TopoDS_Edge uwedge2 = BRepBuilderAPI_MakeEdge(uwp2, uwp3);
+  TopoDS_Edge uwedge3 = BRepBuilderAPI_MakeEdge(uwp3, uwp1);
+
+  TopoDS_Edge uwedge4 = BRepBuilderAPI_MakeEdge(uwp1, uwp3);
+  TopoDS_Edge uwedge5 = BRepBuilderAPI_MakeEdge(uwp3, uwp4);
+  TopoDS_Edge uwedge6 = BRepBuilderAPI_MakeEdge(uwp4, uwp1);
+
+  TopoDS_Wire wupshape1 = BRepBuilderAPI_MakeWire(uwedge1, uwedge2, uwedge3);
+  TopoDS_Wire wupshape2 = BRepBuilderAPI_MakeWire(uwedge4, uwedge5, uwedge6);
+
+  TopoDS_Shape fupshape1 = BRepBuilderAPI_MakeFace(wupshape1);
+  TopoDS_Shape fupshape2 = BRepBuilderAPI_MakeFace(wupshape2);
+
   double p1[3], p2[3], p3[3], p4[3], p5[3];
 
-  m_SurfaceForm->GetUpCenter(p5);
+  m_SurfaceForm->GetUpCenter(p3);
 
   for (int i = 0; i < 3; i++) {
     p1[i] = m_upHingeCenter[i];
     p2[i] = p1[i] + 2 * m_UpDirection[i];
-    p3[i] = (p1[i] + p5[i]) / 2;
-    p4[i] = (p3[i] + p5[i]) / 2 + 2 * m_UpDirection[i];
+    //    p3[i] = (p1[i] + p5[i]) / 2;
+    //    p4[i] = (p3[i] + p5[i]) / 2 + 2 * m_UpDirection[i];
   }
 
   gp_Pnt pathP1(p1[0], p1[1], p1[2]);
   gp_Pnt pathP2(p2[0], p2[1], p2[2]);
   gp_Pnt pathP3(p3[0], p3[1], p3[2]);
-  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
-  gp_Pnt pathP5(p5[0], p5[1], p5[2]);
+  //  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
+  //  gp_Pnt pathP5(p5[0], p5[1], p5[2]);
 
-  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 5);
+  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 3);
 
   bsplinePoints->SetValue(1, pathP1);
   bsplinePoints->SetValue(2, pathP2);
   bsplinePoints->SetValue(3, pathP3);
-  bsplinePoints->SetValue(4, pathP4);
-  bsplinePoints->SetValue(5, pathP5);
+  //  bsplinePoints->SetValue(4, pathP4);
+  //  bsplinePoints->SetValue(5, pathP5);
   GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
   interp.Perform();
   Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
   TopoDS_Edge pathedge1 = BRepBuilderAPI_MakeEdge(bsplineCurve);
-  // TopoDS_Edge pathedge1 = BRepBuilderAPI_MakeEdge(pathP1, pathP5);
   TopoDS_Wire pathwire = BRepBuilderAPI_MakeWire(pathedge1);
-  // upshape.Reverse();
 
-  //  gp_Vec vc(pathP1, pathP5);
-  //  gp_Trsf t;
-  //  t.SetTranslation(vc);
-  //  TopLoc_Location lc(t);
-  //  TopoDS_Shape tshape = uphinge.Moved(lc);
   BRepOffsetAPI_MakePipeShell piper(pathwire);
   piper.Add(upshape);
   piper.Add(uphinge);
 
   piper.Build();
   piper.MakeSolid();
+
   TopoDS_Shape piperesult = piper.Shape();
-  BRepAlgoAPI_Cut booleanCutter(piperesult, downoffset);
+  piperesult.Reverse();
+
+  BRepBuilderAPI_Sewing sewing;
+  sewing.Add(piperesult);
+  sewing.Add(fuphinge);
+  sewing.Add(fupshape1);
+  sewing.Add(fupshape2);
+  sewing.Perform();
+
+  TopoDS_Shell sewingShell = TopoDS::Shell(sewing.SewedShape());
+  TopoDS_Solid solidhandle = BRepBuilderAPI_MakeSolid(sewingShell);
+
+  BRepAlgoAPI_Cut booleanCutter(solidhandle, downoffset);
+  booleanCutter.SetRunParallel(1);
   booleanCutter.Build();
-  piperesult = booleanCutter.Shape();
+  TopoDS_Shape aftercut = booleanCutter.Shape();
+
+  BRepAlgoAPI_Fuse booleanFuseer(aftercut, upoffset);
+  booleanFuseer.SetRunParallel(1);
+  booleanFuseer.Build();
+
+  TopoDS_Shape afterfuse = booleanFuseer.Shape();
+  m_upOffSetUp->Shape(afterfuse);
 
   auto pipepd = vtkSmartPointer<vtkPolyData>::New();
-  this->ConvertTopoDS2PolyData(piperesult, pipepd);
+  this->ConvertTopoDS2PolyData(afterfuse, pipepd);
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputData(pipepd);
   m_upConnectActor->SetMapper(mapper);
@@ -1028,12 +1081,27 @@ void MainWindow::OnFilletUp() {
   TopoDS_Shape forfillet = m_upOffSetUp->Shape();
   BRepFilletAPI_MakeFillet mf(forfillet);
   TopExp_Explorer ex(forfillet, TopAbs_EDGE);
+  double radius = 0.5;
   while (ex.More()) {
-    mf.Add(0.5, TopoDS::Edge(ex.Current()));
+    mf.Add(radius, TopoDS::Edge(ex.Current()));
     ex.Next();
   }
-  if (!mf.IsDone()) {
-    return;
+  mf.Build();
+  while (!mf.IsDone()) {
+    qDebug() << "fillet failed";
+    radius = radius - 0.05;
+    if (radius <= 0)
+      return;
+    mf.Reset();
+    ex.ReInit();
+    int i = 0;
+    while (ex.More()) {
+      i++;
+      qDebug() << i;
+      mf.Add(radius, TopoDS::Edge(ex.Current()));
+      ex.Next();
+    }
+    mf.Build();
   }
   m_upOffSetUp->Shape(mf.Shape());
   auto filletpd = vtkSmartPointer<vtkPolyData>::New();
@@ -1058,11 +1126,15 @@ void MainWindow::OnFilletDown() {
   mf.Build();
   while (!mf.IsDone()) {
     qDebug() << "fillet failed";
-    radius = radius - 0.1;
+    radius = radius - 0.05;
     if (radius <= 0)
       return;
     mf.Reset();
+    ex.ReInit();
+    int i = 0;
     while (ex.More()) {
+      i++;
+      qDebug() << i;
       mf.Add(radius, TopoDS::Edge(ex.Current()));
       ex.Next();
     }
@@ -1080,19 +1152,130 @@ void MainWindow::OnFilletDown() {
   m_Render->GetRenderWindow()->Render();
 }
 
-void MainWindow::OnTubeUp() {}
+void MainWindow::OnTubeUp() {
+  // begin build tubes
+
+  double tubeUmin = m_SurfaceForm->m_TubeRegion[0];
+  double tubeUmax = m_SurfaceForm->m_TubeRegion[1];
+  double tubeVmin = m_SurfaceForm->m_TubeRegion[2];
+  double tubeVmax = m_SurfaceForm->m_TubeRegion[3];
+
+  double tubeRadius = m_SurfaceForm->m_TubeInformation[0];
+  double tubeHeight = m_SurfaceForm->m_TubeInformation[1];
+  double tubeSample = m_SurfaceForm->m_TubeInformation[2];
+
+  TopoDS_Shape tubesShape;
+  TopoDS_Compound tubesCompound;
+  BRep_Builder compoundBuilder;
+  compoundBuilder.MakeCompound(tubesCompound);
+
+  double fb[4];
+  for (int i = 0; i < 4; i++) {
+    fb[i] = m_SurfaceForm->m_UpWireRegion[i];
+  }
+
+  for (double m = tubeUmin; m < tubeUmax; m = m + tubeSample) {
+    for (double n = tubeVmin; n < tubeVmax; n = n + tubeSample) {
+      double uNormal[3], vNormal[3], direction[3];
+
+      if (m > fb[0] - 0.02 && m < fb[1] + 0.02 && n > fb[2] - 0.02 &&
+          n < fb[3] + 0.02)
+        continue;
+      gp_Pnt origion;
+      gp_Vec diu;
+      gp_Vec div;
+      m_SurfaceForm->m_GeomSurfaceUp->D1(m, n, origion, diu, div);
+      uNormal[0] = diu.X();
+      uNormal[1] = diu.Y();
+      uNormal[2] = diu.Z();
+      vtkMath::Normalize(uNormal);
+
+      vNormal[0] = div.X();
+      vNormal[1] = div.Y();
+      vNormal[2] = div.Z();
+      vtkMath::Normalize(vNormal);
+      vtkMath::Cross(uNormal, vNormal, direction);
+
+      double _x = origion.X() - direction[0] * tubeHeight / 2;
+      double _y = origion.Y() - direction[1] * tubeHeight / 2;
+      double _z = origion.Z() - direction[2] * tubeHeight / 2;
+      gp_Pnt center(_x, _y, _z);
+
+      gp_Dir dir(direction[0], direction[1], direction[2]);
+      gp_Ax2 axs(center, dir);
+      TopoDS_Shape prismFace =
+          BRepPrimAPI_MakeCylinder(axs, tubeRadius, tubeHeight);
+      compoundBuilder.Add(tubesCompound, prismFace);
+    }
+  }
+  // end build tubes
+
+  // begin boolean
+  TopoDS_Shape beforetube = m_upOffSetUp->Shape();
+  BRepAlgoAPI_Cut tubecutter(beforetube, tubesCompound);
+  tubecutter.SetRunParallel(1);
+  tubecutter.Build();
+  if (!tubecutter.IsDone())
+    return;
+  TopoDS_Shape aftertube = tubecutter.Shape();
+  // begin fillet
+  TopTools_ListOfShape edgesforfillet = tubecutter.SectionEdges();
+  TopTools_ListIteratorOfListOfShape aiterator(edgesforfillet);
+  BRepFilletAPI_MakeFillet mf(aftertube);
+  double radius = 0.5;
+  while (aiterator.More()) {
+    mf.Add(radius, TopoDS::Edge(aiterator.Value()));
+    aiterator.Next();
+  }
+  mf.Build();
+  while (!mf.IsDone()) {
+    qDebug() << "fillet failed";
+    radius = radius - 0.05;
+    if (radius <= 0) {
+      auto aftertubepd = vtkSmartPointer<vtkPolyData>::New();
+      this->ConvertTopoDS2PolyData(aftertube, aftertubepd);
+      auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+      mapper->SetInputData(aftertubepd);
+      m_upOffSetUp->Shape(aftertube);
+      m_upConnectActor->SetMapper(mapper);
+      m_Render->GetRenderWindow()->Render();
+      m_SurfaceForm->SetTubesVisibility(false);
+      return;
+    }
+
+    mf.Reset();
+    while (aiterator.More()) {
+      mf.Add(radius, TopoDS::Edge(aiterator.Value()));
+      aiterator.Next();
+    }
+    mf.Build();
+  }
+  qDebug() << radius;
+  qDebug() << "extend:" << edgesforfillet.Extent();
+  // end fillet
+  TopoDS_Shape afterfillet = mf.Shape();
+  m_upOffSetUp->Shape(afterfillet);
+
+  auto aftertubepd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterfillet, aftertubepd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(aftertubepd);
+  m_upConnectActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
+  m_SurfaceForm->SetTubesVisibility(false);
+}
 
 void MainWindow::OnTubeDown() {
   // begin build tubes
 
-  double tubeUmin = m_SurfaceForm->m_DownTubeRegion[0];
-  double tubeUmax = m_SurfaceForm->m_DownTubeRegion[1];
-  double tubeVmin = m_SurfaceForm->m_DownTubeRegion[2];
-  double tubeVmax = m_SurfaceForm->m_DownTubeRegion[3];
+  double tubeUmin = m_SurfaceForm->m_TubeRegion[0];
+  double tubeUmax = m_SurfaceForm->m_TubeRegion[1];
+  double tubeVmin = m_SurfaceForm->m_TubeRegion[2];
+  double tubeVmax = m_SurfaceForm->m_TubeRegion[3];
 
-  double tubeRadius = m_SurfaceForm->m_DownTubeInformation[0];
-  double tubeHeight = m_SurfaceForm->m_DownTubeInformation[1];
-  double tubeSample = m_SurfaceForm->m_DownTubeInformation[2];
+  double tubeRadius = m_SurfaceForm->m_TubeInformation[0];
+  double tubeHeight = m_SurfaceForm->m_TubeInformation[1];
+  double tubeSample = m_SurfaceForm->m_TubeInformation[2];
 
   TopoDS_Shape tubesShape;
   TopoDS_Compound tubesCompound;
@@ -1108,7 +1291,8 @@ void MainWindow::OnTubeDown() {
     for (double n = tubeVmin; n < tubeVmax; n = n + tubeSample) {
       double uNormal[3], vNormal[3], direction[3];
 
-      if (m > fb[0] && m < fb[1] && n > fb[2] && n < fb[3])
+      if (m > fb[0] - 0.02 && m < fb[1] + 0.02 && n > fb[2] - 0.02 &&
+          n < fb[3] + 0.02)
         continue;
       gp_Pnt origion;
       gp_Vec diu;
@@ -1142,6 +1326,7 @@ void MainWindow::OnTubeDown() {
   // begin boolean
   TopoDS_Shape beforetube = m_downOffSetUp->Shape();
   BRepAlgoAPI_Cut tubecutter(beforetube, tubesCompound);
+  tubecutter.SetRunParallel(1);
   tubecutter.Build();
   if (!tubecutter.IsDone())
     return;
@@ -1159,8 +1344,17 @@ void MainWindow::OnTubeDown() {
   while (!mf.IsDone()) {
     qDebug() << "fillet failed";
     radius = radius - 0.05;
-    if (radius <= 0)
+    if (radius <= 0) {
+      auto aftertubepd = vtkSmartPointer<vtkPolyData>::New();
+      this->ConvertTopoDS2PolyData(aftertube, aftertubepd);
+      auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+      mapper->SetInputData(aftertubepd);
+      m_downConnectActor->SetMapper(mapper);
+      m_Render->GetRenderWindow()->Render();
+      m_SurfaceForm->SetTubesVisibility(false);
       return;
+    }
+
     mf.Reset();
     while (aiterator.More()) {
       mf.Add(radius, TopoDS::Edge(aiterator.Value()));
@@ -1181,4 +1375,110 @@ void MainWindow::OnTubeDown() {
   m_downConnectActor->SetMapper(mapper);
   m_Render->GetRenderWindow()->Render();
   m_SurfaceForm->SetTubesVisibility(false);
+}
+
+void MainWindow::OnBeltDown() {
+  TopoDS_Shape beforeBelt = m_downOffSetUp->Shape();
+  if (beforeBelt.IsNull())
+    return;
+  // begin cut belt
+  TopoDS_Compound beltCompound;
+  BRep_Builder beltCompoundBuilder;
+  beltCompoundBuilder.MakeCompound(beltCompound);
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt1->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt2->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt3->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt4->Shape());
+  BRepAlgoAPI_Cut cutter(beforeBelt, beltCompound);
+  cutter.SetRunParallel(1);
+  cutter.Build();
+  if (!cutter.IsDone())
+    return;
+  // end cut belt
+  TopoDS_Shape afterCut = cutter.Shape();
+
+  auto afterFilletpd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterCut, afterFilletpd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(afterFilletpd);
+  m_downConnectActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
+  m_SurfaceForm->SetBeltVisibility(false);
+  m_downOffSetUp->Shape(afterCut);
+  //  // begin fillet
+  //  TopTools_ListOfShape edgesForFillet = cutter.SectionEdges();
+  //  TopTools_ListIteratorOfListOfShape filletInterator(edgesForFillet);
+  //  double radius = 0.5;
+  //  BRepFilletAPI_MakeFillet filletter(afterCut);
+  //  while (filletInterator.More()) {
+  //    filletter.Add(radius, TopoDS::Edge(filletInterator.Value()));
+  //    filletInterator.Next();
+  //  }
+  //  try {
+  //    filletter.Build();
+  //  } catch (Standard_Failure &failure) {
+  //    qDebug() << failure.GetMessageString();
+  //  };
+
+  //  qDebug() << " first time";
+  //  while (filletter.IsDone()) {
+  //    qDebug() << "failed --trying";
+  //    radius = radius - 0.05;
+  //    if (radius <= 0) {
+  //      auto afterCutpd = vtkSmartPointer<vtkPolyData>::New();
+  //      this->ConvertTopoDS2PolyData(afterCut, afterCutpd);
+  //      auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  //      mapper->SetInputData(afterCutpd);
+  //      m_downConnectActor->SetMapper(mapper);
+  //      m_downOffSetUp->Shape(afterCut);
+  //      m_Render->GetRenderWindow()->Render();
+  //      return;
+  //    }
+
+  //    filletter.Reset();
+  //    while (filletInterator.More()) {
+  //      filletter.Add(radius, TopoDS::Edge(filletInterator.Value()));
+  //      filletInterator.Next();
+  //    }
+  //    filletter.Build();
+  //  }
+  //  TopoDS_Shape afterFillet = filletter.Shape();
+  // end fillet
+  //  m_downOffSetUp->Shape(afterFillet);
+  //  auto afterFilletpd = vtkSmartPointer<vtkPolyData>::New();
+  //  this->ConvertTopoDS2PolyData(afterFillet, afterFilletpd);
+  //  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  //  mapper->SetInputData(afterFilletpd);
+  //  m_downConnectActor->SetMapper(mapper);
+  //  m_Render->GetRenderWindow()->Render();
+}
+
+void MainWindow::OnBeltUp() {
+  TopoDS_Shape beforeBelt = m_upOffSetUp->Shape();
+  if (beforeBelt.IsNull())
+    return;
+  // begin cut belt
+  TopoDS_Compound beltCompound;
+  BRep_Builder beltCompoundBuilder;
+  beltCompoundBuilder.MakeCompound(beltCompound);
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt1->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt2->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt3->Shape());
+  beltCompoundBuilder.Add(beltCompound, m_SurfaceForm->m_DownBelt4->Shape());
+  BRepAlgoAPI_Cut cutter(beforeBelt, beltCompound);
+  cutter.SetRunParallel(1);
+  cutter.Build();
+  if (!cutter.IsDone())
+    return;
+  // end cut belt
+  TopoDS_Shape afterCut = cutter.Shape();
+
+  auto afterFilletpd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterCut, afterFilletpd);
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(afterFilletpd);
+  m_upConnectActor->SetMapper(mapper);
+  m_Render->GetRenderWindow()->Render();
+  m_SurfaceForm->SetBeltVisibility(false);
+  m_upOffSetUp->Shape(afterCut);
 }

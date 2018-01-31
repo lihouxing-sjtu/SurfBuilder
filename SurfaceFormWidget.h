@@ -31,15 +31,24 @@ public:
   void SetDownVisibility(bool vi);
   void SetUpVisibility(bool vi);
   void SetTubesVisibility(bool vi);
+  void SetBeltVisibility(bool vi);
   double m_DownWireDir[3];
   double m_DownWirePoints[4][3];
   double m_UpWirePoints[4][3];
 
   double m_DownWireRegion[4];
-  double m_DownTubeRegion[4];
-  double m_DownTubeInformation[3];
+  double m_UpWireRegion[4];
+
+  double m_TubeRegion[4];
+  double m_TubeInformation[3];
+
   Handle(Geom_Surface) m_GeomSurfaceDown;
   Handle(Geom_Surface) m_GeomSurfaceUp;
+
+  Handle(TopoDS_HShape) m_DownBelt1;
+  Handle(TopoDS_HShape) m_DownBelt2;
+  Handle(TopoDS_HShape) m_DownBelt3;
+  Handle(TopoDS_HShape) m_DownBelt4;
 
 private:
   Ui::SurfaceFormWidget *ui;
@@ -50,6 +59,11 @@ private:
   vtkSmartPointer<vtkActor> m_ContourActor;
   vtkSmartPointer<vtkActor> m_SurfaceActor;
   vtkSmartPointer<vtkActor> m_TubesActor;
+
+  vtkSmartPointer<vtkActor> m_Belt1Actor;
+  vtkSmartPointer<vtkActor> m_Belt2Actor;
+  vtkSmartPointer<vtkActor> m_Belt3Actor;
+  vtkSmartPointer<vtkActor> m_Belt4Actor;
 
   double m_Direction[3];
   double m_StartPos[3];
@@ -83,6 +97,9 @@ protected:
                         vtkPolyData *outData, vtkPolyData *outdata1, bool down);
   void SetGP(gp_Pnt &gp, double p[]);
   void GetGP(gp_Pnt gp, double p[]);
+
+  TopoDS_Shape CalculateBeltShape(double uvRegion[], double height);
+  void SetBeltConnet(QDoubleSpinBox *);
 signals:
   void pickTwoPoint();
   void canclePick();
@@ -100,6 +117,8 @@ protected slots:
 
   void OnBuildHingeRegion();
   void OnBuildTubeRegion();
+
+  void OnBuildBeltRegion();
 };
 
 #endif // SURFACEFORMWIDGET_H

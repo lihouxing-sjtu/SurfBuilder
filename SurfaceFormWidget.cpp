@@ -4,7 +4,7 @@
 SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
     : QWidget(parent), ui(new Ui::SurfaceFormWidget) {
   ui->setupUi(this);
-
+  this->setWindowFlag(Qt::WindowStaysOnTopHint);
   m_ForCutData = vtkSmartPointer<vtkPolyData>::New();
 
   m_Render = vtkSmartPointer<vtkRenderer>::New();
@@ -25,6 +25,22 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   m_Render->AddActor(m_SurfaceActor);
   m_Render->AddActor(m_TubesActor);
 
+  m_Belt1Actor = vtkSmartPointer<vtkActor>::New();
+  m_Belt1Actor->GetProperty()->SetColor(0.2, 0.4, 0.6);
+  m_Render->AddActor(m_Belt1Actor);
+
+  m_Belt2Actor = vtkSmartPointer<vtkActor>::New();
+  m_Belt2Actor->GetProperty()->SetColor(0.6, 0.4, 0.2);
+  m_Render->AddActor(m_Belt2Actor);
+
+  m_Belt3Actor = vtkSmartPointer<vtkActor>::New();
+  m_Belt3Actor->GetProperty()->SetColor(0.3, 0.1, 0.7);
+  m_Render->AddActor(m_Belt3Actor);
+
+  m_Belt4Actor = vtkSmartPointer<vtkActor>::New();
+  m_Belt4Actor->GetProperty()->SetColor(0.7, 0.1, 0.3);
+  m_Render->AddActor(m_Belt4Actor);
+
   for (int i = 0; i < 3; i++) {
     m_Direction[i] = 0;
     m_StartPos[i] = 0;
@@ -40,6 +56,11 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
 
   m_UpOffSetUp = new TopoDS_HShape();
   m_UpOffSetDown = new TopoDS_HShape();
+
+  m_DownBelt1 = new TopoDS_HShape();
+  m_DownBelt2 = new TopoDS_HShape();
+  m_DownBelt3 = new TopoDS_HShape();
+  m_DownBelt4 = new TopoDS_HShape();
 
   m_UpOffSetUpActor = vtkSmartPointer<vtkActor>::New();
   m_UpOffSetUpActor->GetProperty()->SetColor(1, 0, 0);
@@ -95,6 +116,25 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(OnBuildTubeRegion()));
   connect(ui->TubeMinVDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(OnBuildTubeRegion()));
+  SetBeltConnet(ui->Belt1MaxUDoubleSpinBox);
+  SetBeltConnet(ui->Belt1MaxVDoubleSpinBox);
+  SetBeltConnet(ui->Belt1MinUDoubleSpinBox);
+  SetBeltConnet(ui->Belt1MinVDoubleSpinBox);
+
+  SetBeltConnet(ui->Belt2MaxUDoubleSpinBox);
+  SetBeltConnet(ui->Belt2MaxVDoubleSpinBox);
+  SetBeltConnet(ui->Belt2MinUDoubleSpinBox);
+  SetBeltConnet(ui->Belt2MinVDoubleSpinBox);
+
+  SetBeltConnet(ui->Belt3MaxUDoubleSpinBox);
+  SetBeltConnet(ui->Belt3MaxVDoubleSpinBox);
+  SetBeltConnet(ui->Belt3MinUDoubleSpinBox);
+  SetBeltConnet(ui->Belt3MinVDoubleSpinBox);
+
+  SetBeltConnet(ui->Belt4MaxUDoubleSpinBox);
+  SetBeltConnet(ui->Belt4MaxVDoubleSpinBox);
+  SetBeltConnet(ui->Belt4MinUDoubleSpinBox);
+  SetBeltConnet(ui->Belt4MinVDoubleSpinBox);
 }
 
 SurfaceFormWidget::~SurfaceFormWidget() { delete ui; }
@@ -167,22 +207,21 @@ void SurfaceFormWidget::BuildSurface() {
   TopoDS_Face aFace = BRepBuilderAPI_MakeFace(surf1, 1e-6).Face();
   m_DownHingeSurface->Shape(aFace);
 
-  // offset up
-  BRepOffset_MakeSimpleOffset myOffsetAlgo(aFace,
-                                           ui->OffSetDoubleSpinBox->value());
-  myOffsetAlgo.SetBuildSolidFlag(Standard_True);
-  myOffsetAlgo.Perform();
-  TopoDS_Shape offsetface = myOffsetAlgo.GetResultShape();
-  offsetface.Reverse();
-
-  // offset down
-  BRepOffset_MakeSimpleOffset offsetdown(
-      aFace, -10 * ui->OffSetDoubleSpinBox->value());
-  offsetdown.SetBuildSolidFlag(Standard_True);
-  offsetdown.Perform();
-  TopoDS_Shape downFace = offsetdown.GetResultShape();
-
   if (ui->DownRadioButton->isChecked()) {
+    // offset up
+    BRepOffset_MakeSimpleOffset myOffsetAlgo(aFace,
+                                             ui->OffSetDoubleSpinBox->value());
+    myOffsetAlgo.SetBuildSolidFlag(Standard_True);
+    myOffsetAlgo.Perform();
+    TopoDS_Shape offsetface = myOffsetAlgo.GetResultShape();
+    offsetface.Reverse();
+    // offset down
+    BRepOffset_MakeSimpleOffset offsetdown(
+        aFace, -10 * ui->OffSetDoubleSpinBox->value());
+    offsetdown.SetBuildSolidFlag(Standard_True);
+    offsetdown.Perform();
+    TopoDS_Shape downFace = offsetdown.GetResultShape();
+
     m_DownOffSetUp->Shape(offsetface);
     m_DownOffSetDown->Shape(downFace);
 
@@ -199,6 +238,19 @@ void SurfaceFormWidget::BuildSurface() {
     //    m_DownOffSetDownActor->SetMapper(downmapper);
   }
   if (ui->UpRadioButton->isChecked()) {
+    // offset DOWN
+    BRepOffset_MakeSimpleOffset myOffsetAlgo(
+        aFace, 10 * ui->OffSetDoubleSpinBox->value());
+    myOffsetAlgo.SetBuildSolidFlag(Standard_True);
+    myOffsetAlgo.Perform();
+    TopoDS_Shape downFace = myOffsetAlgo.GetResultShape();
+    downFace.Reverse();
+    // offset UP
+    BRepOffset_MakeSimpleOffset offsetdown(aFace,
+                                           -ui->OffSetDoubleSpinBox->value());
+    offsetdown.SetBuildSolidFlag(Standard_True);
+    offsetdown.Perform();
+    TopoDS_Shape offsetface = offsetdown.GetResultShape();
     m_UpOffSetUp->Shape(offsetface);
     m_UpOffSetDown->Shape(downFace);
 
@@ -291,22 +343,22 @@ void SurfaceFormWidget::BuildSurface() {
       qDebug() << _x << "   " << _y << "   " << _z << "   ";
     }
   }
-  BRepAlgoAPI_Cut booleanCutter(offsetface, tubesCompound);
-  booleanCutter.Build();
-  offsetface = booleanCutter.Shape();
-  //  auto tubesPd = vtkSmartPointer<vtkPolyData>::New();
-  //  ConvertTopoDS2PolyData(tubesShape, tubesPd);
-  //  auto tubesMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  //  tubesMapper->SetInputData(tubesPd);
-  //  m_TubesActor->SetMapper(tubesMapper);
+  //  BRepAlgoAPI_Cut booleanCutter(offsetface, tubesCompound);
+  //  booleanCutter.Build();
+  //  offsetface = booleanCutter.Shape();
+  //  //  auto tubesPd = vtkSmartPointer<vtkPolyData>::New();
+  //  //  ConvertTopoDS2PolyData(tubesShape, tubesPd);
+  //  //  auto tubesMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  //  //  tubesMapper->SetInputData(tubesPd);
+  //  //  m_TubesActor->SetMapper(tubesMapper);
 
-  auto pd = vtkSmartPointer<vtkPolyData>::New();
-  ConvertTopoDS2PolyData(offsetface, pd);
-  auto mapperSurface = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapperSurface->SetInputData(pd);
-  m_SurfaceActor->SetMapper(mapperSurface);
+  //  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  //  ConvertTopoDS2PolyData(offsetface, pd);
+  //  auto mapperSurface = vtkSmartPointer<vtkPolyDataMapper>::New();
+  //  mapperSurface->SetInputData(pd);
+  //  m_SurfaceActor->SetMapper(mapperSurface);
 
-  m_Render->GetRenderWindow()->Render();
+  //  m_Render->GetRenderWindow()->Render();
 }
 
 void SurfaceFormWidget::ConvertTopoDS2PolyData(TopoDS_Shape input,
@@ -455,6 +507,84 @@ void SurfaceFormWidget::GetGP(gp_Pnt gp, double p[]) {
   p[2] = gp.Z();
 }
 
+TopoDS_Shape SurfaceFormWidget::CalculateBeltShape(double uvRegion[],
+                                                   double height) {
+  Handle(Geom_Surface) surf;
+  if (ui->DownRadioButton->isChecked())
+    surf = m_GeomSurfaceDown;
+  else
+    surf = m_GeomSurfaceUp;
+  // begin direction
+  double dirPos[2];
+  dirPos[0] = (uvRegion[0] + uvRegion[1]) / 2;
+  dirPos[1] = (uvRegion[2] + uvRegion[3]) / 2;
+  double udir[3], vdir[3], movedir[3];
+  gp_Pnt origion;
+  gp_Vec diu;
+  gp_Vec div;
+  surf->D1(dirPos[0], dirPos[1], origion, diu, div);
+  udir[0] = diu.X();
+  udir[1] = diu.Y();
+  udir[2] = diu.Z();
+  vtkMath::Normalize(udir);
+  vdir[0] = div.X();
+  vdir[1] = div.Y();
+  vdir[2] = div.Z();
+  vtkMath::Normalize(vdir);
+  vtkMath::Cross(udir, vdir, movedir);
+  // end direction
+
+  // begin move
+  gp_Pnt p1, p2, p3, p4;
+  gp_Pnt tp1, tp2, tp3, tp4;
+  p1 = surf->Value(uvRegion[0], uvRegion[2]); // umin vmin
+  p2 = surf->Value(uvRegion[0], uvRegion[3]); // umin vmax
+  p3 = surf->Value(uvRegion[1], uvRegion[2]); // umax vmin
+  p4 = surf->Value(uvRegion[1], uvRegion[3]); // umax vmax
+  gp_Vec moveVec(gp_Dir(movedir[0], movedir[1], movedir[2]));
+  moveVec.Scale(height / 2);
+
+  p1.Translate(moveVec);
+  p2.Translate(moveVec);
+  p3.Translate(moveVec);
+  p4.Translate(moveVec);
+  // end move
+
+  // begin face
+  TopoDS_Edge edge1 = BRepBuilderAPI_MakeEdge(p1, p2);
+  TopoDS_Edge edge2 = BRepBuilderAPI_MakeEdge(p2, p3);
+  TopoDS_Edge edge3 = BRepBuilderAPI_MakeEdge(p3, p1);
+
+  TopoDS_Edge edge4 = BRepBuilderAPI_MakeEdge(p3, p2);
+  TopoDS_Edge edge5 = BRepBuilderAPI_MakeEdge(p2, p4);
+  TopoDS_Edge edge6 = BRepBuilderAPI_MakeEdge(p4, p3);
+
+  TopoDS_Wire wire1 = BRepBuilderAPI_MakeWire(edge1, edge2, edge3);
+  TopoDS_Wire wire2 = BRepBuilderAPI_MakeWire(edge4, edge5, edge6);
+
+  TopoDS_Face face1 = BRepBuilderAPI_MakeFace(wire1);
+  TopoDS_Face face2 = BRepBuilderAPI_MakeFace(wire2);
+
+  BRepBuilderAPI_Sewing sewing;
+  sewing.Add(face1);
+  sewing.Add(face2);
+  sewing.Perform();
+
+  TopoDS_Shape sewedFace = sewing.SewedShape();
+  sewedFace.Reverse();
+  // end face
+  gp_Vec prismVec(gp_Dir(-movedir[0], -movedir[1], -movedir[2]));
+  prismVec.Scale(height);
+  // begin extrusion
+  TopoDS_Shape prismFace = BRepPrimAPI_MakePrism(sewedFace, prismVec).Shape();
+  // end extrusion
+  return prismFace;
+}
+
+void SurfaceFormWidget::SetBeltConnet(QDoubleSpinBox *box) {
+  connect(box, SIGNAL(valueChanged(double)), this, SLOT(OnBuildBeltRegion()));
+}
+
 void SurfaceFormWidget::OnChangeContourNum(int) { BuildSurface(); }
 
 void SurfaceFormWidget::OnChangeEndPos(int) { BuildSurface(); }
@@ -526,10 +656,19 @@ void SurfaceFormWidget::OnBuildHingeRegion() {
     vtkMath::Normalize(axisu);
     vtkMath::Cross(axisv, axisu, m_DownWireDir);
   } else {
+    m_UpWireRegion[0] = umin;
+    m_UpWireRegion[1] = umax;
+    m_UpWireRegion[2] = vmin;
+    m_UpWireRegion[3] = vmax;
     gp1 = m_GeomSurfaceUp->Value(umin, vmin);
     gp2 = m_GeomSurfaceUp->Value(umin, vmax);
     gp3 = m_GeomSurfaceUp->Value(umax, vmax);
     gp4 = m_GeomSurfaceUp->Value(umax, vmin);
+    GetGP(gp1, m_UpWirePoints[0]);
+    GetGP(gp2, m_UpWirePoints[1]);
+    GetGP(gp3, m_UpWirePoints[2]);
+    GetGP(gp4, m_UpWirePoints[3]);
+
     m_UpCenter[0] = (gp1.X() + gp2.X() + gp3.X() + gp4.X()) / 4;
     m_UpCenter[1] = (gp1.Y() + gp2.Y() + gp3.Y() + gp4.Y()) / 4;
     m_UpCenter[2] = (gp1.Z() + gp2.Z() + gp3.Z() + gp4.Z()) / 4;
@@ -571,14 +710,14 @@ void SurfaceFormWidget::OnBuildTubeRegion() {
 
   double tubeSample = ui->TubeSampleSpinBox->value();
 
-  m_DownTubeRegion[0] = tubeUmin;
-  m_DownTubeRegion[1] = tubeUmax;
-  m_DownTubeRegion[2] = tubeVmin;
-  m_DownTubeRegion[3] = tubeVmax;
+  m_TubeRegion[0] = tubeUmin;
+  m_TubeRegion[1] = tubeUmax;
+  m_TubeRegion[2] = tubeVmin;
+  m_TubeRegion[3] = tubeVmax;
 
-  m_DownTubeInformation[0] = tubeRadius;
-  m_DownTubeInformation[1] = tubeHeight;
-  m_DownTubeInformation[2] = tubeSample;
+  m_TubeInformation[0] = tubeRadius;
+  m_TubeInformation[1] = tubeHeight;
+  m_TubeInformation[2] = tubeSample;
 
   TopoDS_Shape tubesShape;
   TopoDS_Compound tubesCompound;
@@ -636,6 +775,83 @@ void SurfaceFormWidget::OnBuildTubeRegion() {
   m_TubesActor->SetMapper(tubemapper);
   m_Render->GetRenderWindow()->Render();
   qDebug() << "tubes";
+}
+
+void SurfaceFormWidget::OnBuildBeltRegion() {
+
+  double belt1[4];
+  belt1[0] = ui->Belt1MinUDoubleSpinBox->value();
+  belt1[1] = ui->Belt1MaxUDoubleSpinBox->value();
+  belt1[2] = ui->Belt1MinVDoubleSpinBox->value();
+  belt1[3] = ui->Belt1MaxVDoubleSpinBox->value();
+  if (belt1[0] >= belt1[1])
+    return;
+  if (belt1[2] >= belt1[3])
+    return;
+  double belt2[4];
+  belt2[0] = ui->Belt2MinUDoubleSpinBox->value();
+  belt2[1] = ui->Belt2MaxUDoubleSpinBox->value();
+  belt2[2] = ui->Belt2MinVDoubleSpinBox->value();
+  belt2[3] = ui->Belt2MaxVDoubleSpinBox->value();
+  if (belt2[0] >= belt2[1])
+    return;
+  if (belt2[2] >= belt2[3])
+    return;
+  double belt3[4];
+  belt3[0] = ui->Belt3MinUDoubleSpinBox->value();
+  belt3[1] = ui->Belt3MaxUDoubleSpinBox->value();
+  belt3[2] = ui->Belt3MinVDoubleSpinBox->value();
+  belt3[3] = ui->Belt3MaxVDoubleSpinBox->value();
+  if (belt3[0] >= belt3[1])
+    return;
+  if (belt3[2] >= belt3[3])
+    return;
+  double belt4[4];
+  belt4[0] = ui->Belt4MinUDoubleSpinBox->value();
+  belt4[1] = ui->Belt4MaxUDoubleSpinBox->value();
+  belt4[2] = ui->Belt4MinVDoubleSpinBox->value();
+  belt4[3] = ui->Belt4MaxVDoubleSpinBox->value();
+  if (belt4[0] >= belt4[1])
+    return;
+  if (belt4[2] >= belt4[3])
+    return;
+
+  double height = 10;
+
+  TopoDS_Shape beltShape1 = CalculateBeltShape(belt1, height);
+  m_DownBelt1->Shape(beltShape1);
+
+  auto beltpd1 = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(beltShape1, beltpd1);
+  auto beltmapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  beltmapper1->SetInputData(beltpd1);
+  m_Belt1Actor->SetMapper(beltmapper1);
+
+  TopoDS_Shape beltShape2 = CalculateBeltShape(belt2, height);
+  m_DownBelt2->Shape(beltShape2);
+  auto beltpd2 = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(beltShape2, beltpd2);
+  auto beltmapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  beltmapper2->SetInputData(beltpd2);
+  m_Belt2Actor->SetMapper(beltmapper2);
+
+  TopoDS_Shape beltShape3 = CalculateBeltShape(belt3, height);
+  m_DownBelt3->Shape(beltShape3);
+  auto beltpd3 = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(beltShape3, beltpd3);
+  auto beltmapper3 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  beltmapper3->SetInputData(beltpd3);
+  m_Belt3Actor->SetMapper(beltmapper3);
+
+  TopoDS_Shape beltShape4 = CalculateBeltShape(belt4, height);
+  m_DownBelt4->Shape(beltShape4);
+  auto beltpd4 = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(beltShape4, beltpd4);
+  auto beltmapper4 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  beltmapper4->SetInputData(beltpd4);
+  m_Belt4Actor->SetMapper(beltmapper4);
+  this->SetBeltVisibility(true);
+  m_Render->GetRenderWindow()->Render();
 }
 
 void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
@@ -711,6 +927,14 @@ void SurfaceFormWidget::SetUpVisibility(bool vi) {
 
 void SurfaceFormWidget::SetTubesVisibility(bool vi) {
   m_TubesActor->SetVisibility(vi);
+  m_Render->GetRenderWindow()->Render();
+}
+
+void SurfaceFormWidget::SetBeltVisibility(bool vi) {
+  m_Belt1Actor->SetVisibility(vi);
+  m_Belt2Actor->SetVisibility(vi);
+  m_Belt3Actor->SetVisibility(vi);
+  m_Belt4Actor->SetVisibility(vi);
   m_Render->GetRenderWindow()->Render();
 }
 

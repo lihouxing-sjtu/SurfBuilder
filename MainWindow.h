@@ -88,6 +88,8 @@ protected slots:
   void OnFilletDown();
   void OnTubeUp();
   void OnTubeDown();
+  void OnBeltDown();
+  void OnBeltUp();
 };
 
 #endif // MAINWINDOW_H

@@ -226,27 +226,6 @@
             </item>
            </layout>
           </item>
-          <item row="6" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
-            <item>
-             <widget class="QDoubleSpinBox" name="CutHeightSpinBox">
-              <property name="value">
-               <double>5.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QDoubleSpinBox" name="CutThickSpinBox">
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-              <property name="value">
-               <double>5.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
           <item row="1" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
@@ -324,7 +303,28 @@
             </item>
            </layout>
           </item>
-          <item row="15" column="0">
+          <item row="6" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QDoubleSpinBox" name="CutHeightSpinBox">
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="CutThickSpinBox">
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="17" column="0">
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -355,6 +355,9 @@
               </property>
               <property name="maximum">
                <double>360.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>280.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -481,6 +484,20 @@
             </item>
            </layout>
           </item>
+          <item row="9" column="0">
+           <widget class="QPushButton" name="ConnectDownButton">
+            <property name="text">
+             <string>Connect down</string>
+            </property>
+           </widget>
+          </item>
+          <item row="14" column="0">
+           <widget class="QPushButton" name="TubeUpButton">
+            <property name="text">
+             <string>Tube up</string>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0">
            <widget class="QSlider" name="PositionHingeSlider">
             <property name="minimum">
@@ -504,10 +521,10 @@
             </property>
            </widget>
           </item>
-          <item row="9" column="0">
-           <widget class="QPushButton" name="ConnectDownButton">
+          <item row="10" column="0">
+           <widget class="QPushButton" name="ConnectUpButton">
             <property name="text">
-             <string>Connect down</string>
+             <string>Connect up</string>
             </property>
            </widget>
           </item>
@@ -518,17 +535,17 @@
             </property>
            </widget>
           </item>
-          <item row="10" column="0">
-           <widget class="QPushButton" name="ConnectUpButton">
+          <item row="15" column="0">
+           <widget class="QPushButton" name="BeltDownButton">
             <property name="text">
-             <string>Connect up</string>
+             <string>Belt Down</string>
             </property>
            </widget>
           </item>
-          <item row="14" column="0">
-           <widget class="QPushButton" name="TubeUpButton">
+          <item row="16" column="0">
+           <widget class="QPushButton" name="BeltUpButton">
             <property name="text">
-             <string>Tube up</string>
+             <string>Belt Up</string>
             </property>
            </widget>
           </item>
