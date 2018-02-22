@@ -33,6 +33,7 @@ public:
   void SetTubesVisibility(bool vi);
   void SetBeltVisibility(bool vi);
   double m_DownWireDir[3];
+  double m_UpWireDir[3];
   double m_DownWirePoints[4][3];
   double m_UpWirePoints[4][3];
 
@@ -98,7 +99,8 @@ protected:
   void SetGP(gp_Pnt &gp, double p[]);
   void GetGP(gp_Pnt gp, double p[]);
 
-  TopoDS_Shape CalculateBeltShape(double uvRegion[], double height);
+  TopoDS_Shape CalculateBeltShape(double uvRegion[], double height,
+                                  QDoubleSpinBox *uspin, QDoubleSpinBox *vspin);
   void SetBeltConnet(QDoubleSpinBox *);
 signals:
   void pickTwoPoint();

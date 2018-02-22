@@ -134,6 +134,9 @@ void MainWindow::CollectionOfConnect() {
 
   connect(ui->BeltDownButton, SIGNAL(clicked(bool)), this, SLOT(OnBeltDown()));
   connect(ui->BeltUpButton, SIGNAL(clicked(bool)), this, SLOT(OnBeltUp()));
+
+  connect(ui->CombineShapeButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnCombineShape()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -909,18 +912,22 @@ void MainWindow::OnConnectDown() {
   // begin define path
   double p1[3], p2[3], p3[3], p4[3];
   m_SurfaceForm->GetDownCenter(p4);
+  double distance =
+      sqrt(vtkMath::Distance2BetweenPoints(m_downHingeCenter, p4));
   for (int i = 0; i < 3; i++) {
     p1[i] = m_downHingeCenter[i];
-    p2[i] = p1[i] + 2 * m_DownDirection[i];
-    p3[i] = p4[i] + m_SurfaceForm->m_DownWireDir[i] * 15;
+    p2[i] = p1[i] + distance / 8 * m_DownDirection[i];
+    p3[i] = p1[i] + 3 * distance / 8 * m_DownDirection[i];
   }
   gp_Pnt pathP1(p1[0], p1[1], p1[2]);
   gp_Pnt pathP2(p2[0], p2[1], p2[2]);
-  gp_Pnt pathP3(p4[0], p4[1], p4[2]);
-  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 3);
+  gp_Pnt pathP3(p3[0], p3[1], p3[2]);
+  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
+  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 4);
   bsplinePoints->SetValue(1, pathP1);
   bsplinePoints->SetValue(2, pathP2);
   bsplinePoints->SetValue(3, pathP3);
+  bsplinePoints->SetValue(4, pathP4);
   GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
   interp.Perform();
   Handle(Geom_BSplineCurve) bsplineCurve = interp.Curve();
@@ -1007,27 +1014,28 @@ void MainWindow::OnConnectUp() {
 
   double p1[3], p2[3], p3[3], p4[3], p5[3];
 
-  m_SurfaceForm->GetUpCenter(p3);
+  m_SurfaceForm->GetUpCenter(p4);
+  double distance = sqrt(vtkMath::Distance2BetweenPoints(m_upHingeCenter, p4));
 
   for (int i = 0; i < 3; i++) {
     p1[i] = m_upHingeCenter[i];
-    p2[i] = p1[i] + 2 * m_UpDirection[i];
-    //    p3[i] = (p1[i] + p5[i]) / 2;
+    p2[i] = p1[i] + distance / 4 * m_UpDirection[i];
+    p3[i] = p1[i] + 3 * distance / 4 * m_UpDirection[i];
     //    p4[i] = (p3[i] + p5[i]) / 2 + 2 * m_UpDirection[i];
   }
 
   gp_Pnt pathP1(p1[0], p1[1], p1[2]);
   gp_Pnt pathP2(p2[0], p2[1], p2[2]);
   gp_Pnt pathP3(p3[0], p3[1], p3[2]);
-  //  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
+  gp_Pnt pathP4(p4[0], p4[1], p4[2]);
   //  gp_Pnt pathP5(p5[0], p5[1], p5[2]);
 
-  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 3);
+  Handle_TColgp_HArray1OfPnt bsplinePoints = new TColgp_HArray1OfPnt(1, 4);
 
   bsplinePoints->SetValue(1, pathP1);
   bsplinePoints->SetValue(2, pathP2);
   bsplinePoints->SetValue(3, pathP3);
-  //  bsplinePoints->SetValue(4, pathP4);
+  bsplinePoints->SetValue(4, pathP4);
   //  bsplinePoints->SetValue(5, pathP5);
   GeomAPI_Interpolate interp(bsplinePoints, 0, Precision::Approximation());
   interp.Perform();
@@ -1481,4 +1489,40 @@ void MainWindow::OnBeltUp() {
   m_Render->GetRenderWindow()->Render();
   m_SurfaceForm->SetBeltVisibility(false);
   m_upOffSetUp->Shape(afterCut);
+}
+
+void MainWindow::OnCombineShape() {
+  //防止误操作
+  if (m_HingeShape->Shape().IsNull())
+    return;
+  if (m_upOffSetUp->Shape().IsNull())
+    return;
+  if (m_downOffSetUp->Shape().IsNull())
+    return;
+
+  BRepAlgoAPI_Fuse booleanFuseer1(m_HingeShape->Shape(), m_upOffSetUp->Shape());
+  booleanFuseer1.SetRunParallel(1);
+  booleanFuseer1.Build();
+  if (!booleanFuseer1.IsDone())
+    return;
+
+  TopoDS_Shape fusedshape = booleanFuseer1.Shape();
+  BRepAlgoAPI_Fuse booleanFuseer2(fusedshape, m_downOffSetUp->Shape());
+  booleanFuseer2.SetRunParallel(1);
+  booleanFuseer2.Build();
+  if (!booleanFuseer2.IsDone())
+    return;
+
+  TopoDS_Shape afterFuse = booleanFuseer2.Shape();
+  auto pd = vtkSmartPointer<vtkPolyData>::New();
+  this->ConvertTopoDS2PolyData(afterFuse, pd);
+
+  QTime time = QTime::currentTime();
+  QString modelName = "Plate-" + QString::number(time.hour()) + "-" +
+                      QString::number(time.minute()) + "-" +
+                      QString::number(time.second());
+  ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+  m_ModelList.append(item);
+  item->SetTopoDS_Shape(afterFuse);
+  this->AddModelItem(m_ModelList.last());
 }

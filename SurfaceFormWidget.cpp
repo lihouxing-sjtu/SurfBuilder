@@ -508,7 +508,9 @@ void SurfaceFormWidget::GetGP(gp_Pnt gp, double p[]) {
 }
 
 TopoDS_Shape SurfaceFormWidget::CalculateBeltShape(double uvRegion[],
-                                                   double height) {
+                                                   double height,
+                                                   QDoubleSpinBox *uspin,
+                                                   QDoubleSpinBox *vspin) {
   Handle(Geom_Surface) surf;
   if (ui->DownRadioButton->isChecked())
     surf = m_GeomSurfaceDown;
@@ -543,6 +545,18 @@ TopoDS_Shape SurfaceFormWidget::CalculateBeltShape(double uvRegion[],
   p4 = surf->Value(uvRegion[1], uvRegion[3]); // umax vmax
   gp_Vec moveVec(gp_Dir(movedir[0], movedir[1], movedir[2]));
   moveVec.Scale(height / 2);
+
+  double up1[3], up2[3];
+  double vp1[3], vp2[3];
+
+  GetGP(p1, up1);
+  GetGP(p3, up2);
+  double distanceu = sqrt(vtkMath::Distance2BetweenPoints(up1, up2));
+  uspin->setValue(distanceu);
+  GetGP(p1, vp1);
+  GetGP(p2, vp2);
+  double distancev = sqrt(vtkMath::Distance2BetweenPoints(vp1, vp2));
+  vspin->setValue(distancev);
 
   p1.Translate(moveVec);
   p2.Translate(moveVec);
@@ -672,6 +686,15 @@ void SurfaceFormWidget::OnBuildHingeRegion() {
     m_UpCenter[0] = (gp1.X() + gp2.X() + gp3.X() + gp4.X()) / 4;
     m_UpCenter[1] = (gp1.Y() + gp2.Y() + gp3.Y() + gp4.Y()) / 4;
     m_UpCenter[2] = (gp1.Z() + gp2.Z() + gp3.Z() + gp4.Z()) / 4;
+
+    double axisv[3], axisu[3];
+    for (int i = 0; i < 3; i++) {
+      axisv[i] = m_UpWirePoints[0][i] - m_UpWirePoints[1][i];
+      axisu[i] = m_UpWirePoints[2][i] - m_UpWirePoints[1][i];
+    }
+    vtkMath::Normalize(axisv);
+    vtkMath::Normalize(axisu);
+    vtkMath::Cross(axisv, axisu, m_UpWireDir);
   }
 
   TopoDS_Edge aEdge1 = BRepBuilderAPI_MakeEdge(gp1, gp2);
@@ -818,7 +841,8 @@ void SurfaceFormWidget::OnBuildBeltRegion() {
 
   double height = 10;
 
-  TopoDS_Shape beltShape1 = CalculateBeltShape(belt1, height);
+  TopoDS_Shape beltShape1 = CalculateBeltShape(
+      belt1, height, ui->Belt1UWidthSpinBox, ui->Belt1VWidthSpinBox);
   m_DownBelt1->Shape(beltShape1);
 
   auto beltpd1 = vtkSmartPointer<vtkPolyData>::New();
@@ -827,7 +851,8 @@ void SurfaceFormWidget::OnBuildBeltRegion() {
   beltmapper1->SetInputData(beltpd1);
   m_Belt1Actor->SetMapper(beltmapper1);
 
-  TopoDS_Shape beltShape2 = CalculateBeltShape(belt2, height);
+  TopoDS_Shape beltShape2 = CalculateBeltShape(
+      belt2, height, ui->Belt2UWidthSpinBox, ui->Belt2VWidthSpinBox);
   m_DownBelt2->Shape(beltShape2);
   auto beltpd2 = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(beltShape2, beltpd2);
@@ -835,7 +860,8 @@ void SurfaceFormWidget::OnBuildBeltRegion() {
   beltmapper2->SetInputData(beltpd2);
   m_Belt2Actor->SetMapper(beltmapper2);
 
-  TopoDS_Shape beltShape3 = CalculateBeltShape(belt3, height);
+  TopoDS_Shape beltShape3 = CalculateBeltShape(
+      belt3, height, ui->Belt3UWidthSpinBox, ui->Belt3VWidthSpinBox);
   m_DownBelt3->Shape(beltShape3);
   auto beltpd3 = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(beltShape3, beltpd3);
@@ -843,7 +869,8 @@ void SurfaceFormWidget::OnBuildBeltRegion() {
   beltmapper3->SetInputData(beltpd3);
   m_Belt3Actor->SetMapper(beltmapper3);
 
-  TopoDS_Shape beltShape4 = CalculateBeltShape(belt4, height);
+  TopoDS_Shape beltShape4 = CalculateBeltShape(
+      belt4, height, ui->Belt4UWidthSpinBox, ui->Belt4VWidthSpinBox);
   m_DownBelt4->Shape(beltShape4);
   auto beltpd4 = vtkSmartPointer<vtkPolyData>::New();
   ConvertTopoDS2PolyData(beltShape4, beltpd4);

@@ -90,6 +90,8 @@ protected slots:
   void OnTubeDown();
   void OnBeltDown();
   void OnBeltUp();
+
+  void OnCombineShape();
 };
 
 #endif // MAINWINDOW_H
