@@ -14,7 +14,8 @@ enum pickState {
   SelectLoop,
   PickPoint,
   ArcCut,
-  pickForSurfaceForm
+  pickForSurfaceForm,
+  pickHook
 };
 enum keyState { Nokey, F1 };
 class CustomViewWidget : public QVTKWidget {
@@ -28,6 +29,7 @@ public:
   void SetPickPoint();
   void StartArcCut();
   void CancleArcCut();
+  void SetPickHook();
 
 private:
   Ui::CustomViewWidget *ui;
@@ -58,12 +60,14 @@ protected:
   // virtual mousePressEvent(QMouseEvent *event);
   virtual void mouseMoveEvent(QMouseEvent *event);
   void endArcCutPoints();
+  void endPickHook();
 signals:
   void endBSplineCurve();
   void endSelectLoop();
   void endPickPoint();
   void endArcCut();
   void endSurfaceFormPick();
+  void endHook();
 protected slots:
   void OnChangeBKColor1();
   void OnChangeBKColor2();

@@ -19,6 +19,9 @@ public:
   void SetDirection(double *updir, double *downdir);
   void SetEndPos(double *pos);
   void SetStartPos(double *pos);
+
+  void SetHookPoint(double point[], double direction[]);
+
   Handle(TopoDS_HShape) GetDownHingeSurface();
   void GetDownCenter(double dcenter[]);
   Handle(TopoDS_HShape) GetUpHingeSurface();
@@ -66,6 +69,9 @@ private:
   vtkSmartPointer<vtkActor> m_Belt3Actor;
   vtkSmartPointer<vtkActor> m_Belt4Actor;
 
+  vtkSmartPointer<vtkActor> m_ElbowHookActor;
+  vtkSmartPointer<vtkActor> m_WristHookActor;
+
   double m_Direction[3];
   double m_StartPos[3];
   double m_EndPosp[3];
@@ -91,6 +97,9 @@ private:
 
   vtkSmartPointer<vtkActor> m_fromOrigonActor;
 
+  double m_ElbowHookPoint[3], m_WristHookPoint[3];
+  double m_ElbowHookDirection[3], m_WristHookDirection[3];
+
 protected:
   void ConvertTopoDS2PolyData(TopoDS_Shape input, vtkPolyData *output);
   void GetContourPoints(vtkPolyData *inputData, int sampleNum,
@@ -105,6 +114,7 @@ protected:
 signals:
   void pickTwoPoint();
   void canclePick();
+  void pickHook();
 protected slots:
   void BuildSurface();
   void OnChangeContourNum(int);
@@ -121,6 +131,17 @@ protected slots:
   void OnBuildTubeRegion();
 
   void OnBuildBeltRegion();
+
+  void OnPickHookPoint();
+
+  void BuildHook();
+
+  void OnHookRotateLeft();
+  void OnHookRotateRight();
+  void OnHookMoveUp();
+  void OnHookMoveDown();
+  void OnHookMoveLeft();
+  void OnHookMoveRight();
 };
 
 #endif // SURFACEFORMWIDGET_H

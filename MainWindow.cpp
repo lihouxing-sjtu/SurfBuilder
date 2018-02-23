@@ -137,6 +137,9 @@ void MainWindow::CollectionOfConnect() {
 
   connect(ui->CombineShapeButton, SIGNAL(clicked(bool)), this,
           SLOT(OnCombineShape()));
+
+  connect(m_SurfaceForm, SIGNAL(pickHook()), this, SLOT(OnStartPickHook()));
+  connect(ui->ViewWidget, SIGNAL(endHook()), this, SLOT(OnEndPickHook()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -1525,4 +1528,18 @@ void MainWindow::OnCombineShape() {
   m_ModelList.append(item);
   item->SetTopoDS_Shape(afterFuse);
   this->AddModelItem(m_ModelList.last());
+}
+
+void MainWindow::OnStartPickHook() { ui->ViewWidget->SetPickHook(); }
+
+void MainWindow::OnEndPickHook() {
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  ui->ViewWidget->GetPickPoints(points);
+
+  double hookPoint[3];
+  points->GetPoint(0, hookPoint);
+
+  double direction[3];
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(direction);
+  m_SurfaceForm->SetHookPoint(hookPoint, direction);
 }

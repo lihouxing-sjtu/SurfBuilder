@@ -68,7 +68,7 @@ void CustomViewWidget::GetPickPoints(vtkPoints *output) {
 
 void CustomViewWidget::SetPickPoint() {
   if (m_pickState != None) {
-    QMessageBox::information(this, tr("Errir"),
+    QMessageBox::information(this, tr("Error"),
                              tr("Please finish the pick firstly!"));
     return;
   }
@@ -78,7 +78,7 @@ void CustomViewWidget::SetPickPoint() {
 
 void CustomViewWidget::StartArcCut() {
   if (m_pickState != None) {
-    QMessageBox::information(this, tr("Errir"),
+    QMessageBox::information(this, tr("Error"),
                              tr("Please finish the pick firstly!"));
     return;
   }
@@ -98,6 +98,16 @@ void CustomViewWidget::CancleArcCut() {
   m_RenderWin->Render();
   m_pickedPoints->Reset();
   m_pickedPoints->Initialize();
+}
+
+void CustomViewWidget::SetPickHook() {
+  if (m_pickState != None) {
+    QMessageBox::information(this, tr("Error"),
+                             tr("Please finish the pick firstly!"));
+    return;
+  }
+  m_pickState = pickHook;
+  this->setCursor(Qt::CrossCursor);
 }
 
 void CustomViewWidget::resizeEvent(QResizeEvent *event) {
@@ -197,6 +207,8 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
   m_RenderRen->AddActor(actor);
   m_pickSpheres.append(actor);
   QVTKWidget::mouseDoubleClickEvent(event);
+  if (m_pickState == pickHook)
+    endPickHook();
   if (m_pickState == PickPoint)
     OnEndPickPoint();
   if (m_pickState == ArcCut) {
@@ -243,6 +255,14 @@ void CustomViewWidget::endArcCutPoints() {
   m_pickState = None;
   this->setCursor(Qt::ArrowCursor);
   emit this->endArcCut();
+}
+
+void CustomViewWidget::endPickHook() {
+  if (m_pickState != pickHook)
+    return;
+  m_pickState = None;
+  this->setCursor(Qt::ArrowCursor);
+  emit this->endHook();
 }
 
 void CustomViewWidget::OnChangeBKColor1() {

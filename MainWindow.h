@@ -92,6 +92,9 @@ protected slots:
   void OnBeltUp();
 
   void OnCombineShape();
+
+  void OnStartPickHook();
+  void OnEndPickHook();
 };
 
 #endif // MAINWINDOW_H

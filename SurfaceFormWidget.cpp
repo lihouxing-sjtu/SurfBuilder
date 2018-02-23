@@ -78,6 +78,14 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   m_DownOffSetDownActor->GetProperty()->SetColor(0, 1, 0);
   m_Render->AddActor(m_DownOffSetDownActor);
 
+  m_ElbowHookActor = vtkSmartPointer<vtkActor>::New();
+  m_ElbowHookActor->GetProperty()->SetColor(0, 0, 1);
+  m_Render->AddActor(m_ElbowHookActor);
+
+  m_WristHookActor = vtkSmartPointer<vtkActor>::New();
+  m_WristHookActor->GetProperty()->SetColor(0, 0, 1);
+  m_Render->AddActor(m_WristHookActor);
+
   connect(ui->pickTwoPointsButton, SIGNAL(clicked(bool)), this,
           SLOT(OnPickTwoPoints()));
   connect(ui->pickCancleButton, SIGNAL(clicked(bool)), this,
@@ -116,6 +124,36 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(OnBuildTubeRegion()));
   connect(ui->TubeMinVDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(OnBuildTubeRegion()));
+
+  connect(ui->PickHookPointButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnPickHookPoint()));
+  connect(ui->HookHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookLengthSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRadiusSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRotateHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRotationSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookGuideRadiusSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookSupportHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+
+  connect(ui->HookRotateLeftButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookRotateLeft()));
+  connect(ui->HookRotateRightButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookRotateRight()));
+  connect(ui->HookMoveUpButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookMoveUp()));
+  connect(ui->HookMoveDownButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookMoveDown()));
+  connect(ui->HookMoveLeftButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookMoveLeft()));
+  connect(ui->HookMoveRightButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnHookMoveRight()));
   SetBeltConnet(ui->Belt1MaxUDoubleSpinBox);
   SetBeltConnet(ui->Belt1MaxVDoubleSpinBox);
   SetBeltConnet(ui->Belt1MinUDoubleSpinBox);
@@ -881,6 +919,248 @@ void SurfaceFormWidget::OnBuildBeltRegion() {
   m_Render->GetRenderWindow()->Render();
 }
 
+void SurfaceFormWidget::OnPickHookPoint() {
+  if (ui->WristRadioButton->isChecked() | ui->ElbowRadioButton->isChecked()) {
+    ui->WristRadioButton->isChecked() ? m_WristHookActor->VisibilityOff() : 1;
+    ui->ElbowRadioButton->isChecked() ? m_ElbowHookActor->VisibilityOff() : 1;
+    m_Render->GetRenderWindow()->Render();
+    emit pickHook();
+  }
+  return;
+}
+
+void SurfaceFormWidget::BuildHook() {
+  //偏向肘关节一侧定位
+  if (ui->ElbowRadioButton->isChecked()) {
+    //高度
+    double tubehight1 = ui->HookHightSpinBox->value();
+    double hight1 = ui->HookSupportHightSpinBox->value();
+
+    double tubeRadius = ui->HookRadiusSpinBox->value();
+
+    double tubehight2 = ui->HookLengthSpinBox->value();
+
+    double tubehight4 = ui->HookRotateHightSpinBox->value();
+    //方向
+    double direction1[3];
+    for (int i = 0; i < 3; i++)
+      direction1[i] = m_ElbowHookDirection[i];
+    //开始构建圆柱
+
+    // clinder1
+    double center1[3];
+    for (int i = 0; i < 3; i++)
+      center1[i] = m_ElbowHookPoint[i] - hight1 * direction1[i];
+
+    gp_Pnt clinder1center(center1[0], center1[1], center1[2]);
+    gp_Dir clinder1dir(direction1[0], direction1[1], direction1[2]);
+    gp_Ax2 clinder1axs(clinder1center, clinder1dir);
+    TopoDS_Shape clinder1Face =
+        BRepPrimAPI_MakeCylinder(clinder1axs, tubeRadius, tubehight1 + hight1);
+
+    auto clinder1pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(clinder1Face, clinder1pd);
+
+    // clinder2
+    double rotateDegree = ui->HookRotationSlider->value();
+    double direction2[3];
+    vtkMath::Perpendiculars(direction1, direction2, nullptr,
+                            rotateDegree / 180 * vtkMath::Pi());
+
+    double center2[3];
+    for (int i = 0; i < 3; i++)
+      center2[i] = m_ElbowHookPoint[i] - hight1 * direction1[i] -
+                   tubeRadius * direction2[i];
+
+    gp_Pnt clinder2center(center2[0], center2[1], center2[2]);
+    gp_Dir clinder2dir(direction2[0], direction2[1], direction2[2]);
+    gp_Ax2 clinder2axs(clinder2center, clinder2dir);
+    TopoDS_Shape clinder2Face =
+        BRepPrimAPI_MakeCylinder(clinder2axs, tubeRadius, tubehight2);
+
+    auto clinder2pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(clinder2Face, clinder2pd);
+
+    // clinder3
+    double center3[3];
+    double direction3[3];
+    for (int i = 0; i < 3; i++) {
+      center3[i] = center2[i];
+      direction3[i] = -direction2[i];
+    }
+    gp_Pnt clinder3center(center3[0], center3[1], center3[2]);
+    gp_Dir clinder3dir(direction3[0], direction3[1], direction3[2]);
+    gp_Ax2 clinder3axs(clinder3center, clinder3dir);
+    TopoDS_Shape clinder3Face = BRepPrimAPI_MakeCylinder(
+        clinder3axs, ui->HookGuideRadiusSpinBox->value(), tubehight2);
+    auto clinder3pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(clinder3Face, clinder3pd);
+
+    // clinder4
+    double center4[3];
+    double direction4[3];
+    for (int i = 0; i < 3; i++) {
+      center4[i] = center2[i] + direction2[i] * (tubehight2 - tubeRadius);
+      direction4[i] = direction1[i];
+    }
+
+    gp_Pnt clinder4center(center4[0], center4[1], center4[2]);
+    gp_Dir clinder4dir(direction4[0], direction4[1], direction4[2]);
+    gp_Ax2 clinder4axs(clinder4center, clinder4dir);
+    TopoDS_Shape clinder4Face =
+        BRepPrimAPI_MakeCylinder(clinder4axs, tubeRadius, tubehight4);
+    auto clinder4pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(clinder4Face, clinder4pd);
+
+    auto elbowAppender = vtkSmartPointer<vtkAppendPolyData>::New();
+    elbowAppender->AddInputData(clinder1pd);
+    elbowAppender->AddInputData(clinder2pd);
+    elbowAppender->AddInputData(clinder3pd);
+    elbowAppender->AddInputData(clinder4pd);
+    elbowAppender->Update();
+
+    auto clinder1mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    clinder1mapper->SetInputData(elbowAppender->GetOutput());
+
+    m_ElbowHookActor->SetMapper(clinder1mapper);
+    m_ElbowHookActor->VisibilityOn();
+    m_Render->GetRenderWindow()->Render();
+    //结束构建圆柱
+  }
+
+  //偏向腕关节一侧
+  if (ui->WristRadioButton->isChecked()) {
+  }
+}
+
+void SurfaceFormWidget::OnHookRotateLeft() {
+  double direction[3];
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(direction);
+  vtkMath::MultiplyScalar(direction, -1);
+
+  auto transform = vtkSmartPointer<vtkTransform>::New();
+  transform->RotateWXYZ(1, direction);
+  transform->Update();
+  if (ui->ElbowRadioButton->isChecked()) {
+    double changedDirection[3];
+    for (int i = 0; i < 3; i++)
+      changedDirection[i] =
+          transform->TransformDoubleVector(m_ElbowHookDirection)[i];
+    for (int i = 0; i < 3; i++)
+      m_ElbowHookDirection[i] = changedDirection[i];
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    double changedDirection[3];
+    for (int i = 0; i < 3; i++)
+      changedDirection[i] =
+          transform->TransformDoubleVector(m_WristHookDirection)[i];
+    for (int i = 0; i < 3; i++)
+      m_WristHookDirection[i] = changedDirection[i];
+    BuildHook();
+  }
+}
+
+void SurfaceFormWidget::OnHookRotateRight() {
+  double direction[3];
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(direction);
+  vtkMath::MultiplyScalar(direction, -1);
+
+  auto transform = vtkSmartPointer<vtkTransform>::New();
+  transform->RotateWXYZ(-1, direction);
+  transform->Update();
+  if (ui->ElbowRadioButton->isChecked()) {
+    double changedDirection[3];
+    for (int i = 0; i < 3; i++)
+      changedDirection[i] =
+          transform->TransformDoubleVector(m_ElbowHookDirection)[i];
+    for (int i = 0; i < 3; i++)
+      m_ElbowHookDirection[i] = changedDirection[i];
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    double changedDirection[3];
+    for (int i = 0; i < 3; i++)
+      changedDirection[i] =
+          transform->TransformDoubleVector(m_WristHookDirection)[i];
+    for (int i = 0; i < 3; i++)
+      m_WristHookDirection[i] = changedDirection[i];
+    BuildHook();
+  }
+}
+
+void SurfaceFormWidget::OnHookMoveUp() {
+  double viewUp[3];
+  m_Render->GetActiveCamera()->GetViewUp(viewUp);
+  if (ui->ElbowRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_ElbowHookPoint[i] += viewUp[i];
+    }
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_WristHookPoint[i] += viewUp[i];
+    }
+    BuildHook();
+  }
+}
+
+void SurfaceFormWidget::OnHookMoveDown() {
+  double viewUp[3];
+  m_Render->GetActiveCamera()->GetViewUp(viewUp);
+  if (ui->ElbowRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_ElbowHookPoint[i] -= viewUp[i];
+    }
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_WristHookPoint[i] -= viewUp[i];
+    }
+    BuildHook();
+  }
+}
+
+void SurfaceFormWidget::OnHookMoveLeft() {
+  double leftDirection[3];
+  double viewUp[3], viewInside[3];
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(viewInside);
+  m_Render->GetActiveCamera()->GetViewUp(viewUp);
+
+  vtkMath::Cross(viewUp, viewInside, leftDirection);
+  if (ui->ElbowRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++)
+      m_ElbowHookPoint[i] += leftDirection[i];
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++)
+      m_WristHookPoint[i] += leftDirection[i];
+    BuildHook();
+  }
+}
+
+void SurfaceFormWidget::OnHookMoveRight() {
+  double leftDirection[3];
+  double viewUp[3], viewInside[3];
+  m_Render->GetActiveCamera()->GetDirectionOfProjection(viewInside);
+  m_Render->GetActiveCamera()->GetViewUp(viewUp);
+
+  vtkMath::Cross(viewUp, viewInside, leftDirection);
+  if (ui->ElbowRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++)
+      m_ElbowHookPoint[i] -= leftDirection[i];
+    BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++)
+      m_WristHookPoint[i] -= leftDirection[i];
+    BuildHook();
+  }
+}
+
 void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
   clean->SetInputData(data);
@@ -928,6 +1208,23 @@ void SurfaceFormWidget::SetEndPos(double *pos) {
 void SurfaceFormWidget::SetStartPos(double *pos) {
   for (int i = 0; i < 3; i++)
     m_StartPos[i] = pos[i];
+}
+
+void SurfaceFormWidget::SetHookPoint(double point[], double direction[]) {
+  if (ui->ElbowRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_ElbowHookPoint[i] = point[i];
+      m_ElbowHookDirection[i] = direction[i];
+    }
+    this->BuildHook();
+  }
+  if (ui->WristRadioButton->isChecked()) {
+    for (int i = 0; i < 3; i++) {
+      m_WristHookPoint[i] = point[i];
+      m_WristHookDirection[i] = direction[i];
+    }
+    this->BuildHook();
+  }
 }
 
 void SurfaceFormWidget::GetDownCenter(double dcenter[]) {
