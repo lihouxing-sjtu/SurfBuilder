@@ -62,6 +62,9 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   m_DownBelt3 = new TopoDS_HShape();
   m_DownBelt4 = new TopoDS_HShape();
 
+  m_ElbowGuideShape = new TopoDS_HShape();
+  m_WristGuideShape = new TopoDS_HShape();
+
   m_UpOffSetUpActor = vtkSmartPointer<vtkActor>::New();
   m_UpOffSetUpActor->GetProperty()->SetColor(1, 0, 0);
   m_Render->AddActor(m_UpOffSetUpActor);
@@ -131,13 +134,13 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(BuildHook()));
   connect(ui->HookLengthSlider, SIGNAL(valueChanged(int)), this,
           SLOT(BuildHook()));
-  connect(ui->HookRadiusSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->HookRadiusDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildHook()));
   connect(ui->HookRotateHightSpinBox, SIGNAL(valueChanged(int)), this,
           SLOT(BuildHook()));
   connect(ui->HookRotationSlider, SIGNAL(valueChanged(int)), this,
           SLOT(BuildHook()));
-  connect(ui->HookGuideRadiusSpinBox, SIGNAL(valueChanged(int)), this,
+  connect(ui->HookGuideRadiusDoubleSpinBox, SIGNAL(valueChanged(double)), this,
           SLOT(BuildHook()));
   connect(ui->HookSupportHightSpinBox, SIGNAL(valueChanged(int)), this,
           SLOT(BuildHook()));
@@ -161,6 +164,11 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(OnHookMoveLeft()));
   connect(ui->HookMoveRightButton, SIGNAL(clicked(bool)), this,
           SLOT(OnHookMoveRight()));
+
+  connect(ui->ElbowRadioButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnElbowRadioButton()));
+  connect(ui->WristRadioButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnWristRadioButton()));
   SetBeltConnet(ui->Belt1MaxUDoubleSpinBox);
   SetBeltConnet(ui->Belt1MaxVDoubleSpinBox);
   SetBeltConnet(ui->Belt1MinUDoubleSpinBox);
@@ -644,6 +652,76 @@ void SurfaceFormWidget::SetBeltConnet(QDoubleSpinBox *box) {
   connect(box, SIGNAL(valueChanged(double)), this, SLOT(OnBuildBeltRegion()));
 }
 
+void SurfaceFormWidget::SaveParameter(double parameter[]) {
+  parameter[0] = ui->HookHightSpinBox->value();
+  parameter[1] = ui->HookSupportHightSpinBox->value();
+  parameter[2] = ui->HookRotateHightSpinBox->value();
+  parameter[3] = ui->HookRadiusDoubleSpinBox->value();
+  parameter[4] = ui->HookGuideRadiusDoubleSpinBox->value();
+  parameter[5] = ui->HookLengthSlider->value();
+  parameter[6] = ui->HookCubeXSpinBox->value();
+  parameter[7] = ui->HookCubeYSpinBox->value();
+  parameter[8] = ui->HookCubeZSpinBox->value();
+  parameter[9] = ui->HookRotationSlider->value();
+}
+
+void SurfaceFormWidget::SetParameter(double parameter[]) {
+  disconnect(ui->HookHightSpinBox, SIGNAL(valueChanged(int)), this,
+             SLOT(BuildHook()));
+  disconnect(ui->HookLengthSlider, SIGNAL(valueChanged(int)), this,
+             SLOT(BuildHook()));
+  disconnect(ui->HookRadiusDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+             SLOT(BuildHook()));
+  disconnect(ui->HookRotateHightSpinBox, SIGNAL(valueChanged(int)), this,
+             SLOT(BuildHook()));
+  disconnect(ui->HookRotationSlider, SIGNAL(valueChanged(int)), this,
+             SLOT(BuildHook()));
+  disconnect(ui->HookGuideRadiusDoubleSpinBox, SIGNAL(valueChanged(double)),
+             this, SLOT(BuildHook()));
+  disconnect(ui->HookSupportHightSpinBox, SIGNAL(valueChanged(int)), this,
+             SLOT(BuildHook()));
+
+  ui->HookHightSpinBox->setValue(parameter[0]);
+  ui->HookSupportHightSpinBox->setValue(parameter[1]);
+  ui->HookRotateHightSpinBox->setValue(parameter[2]);
+  ui->HookRadiusDoubleSpinBox->setValue(parameter[3]);
+  ui->HookGuideRadiusDoubleSpinBox->setValue(parameter[4]);
+  ui->HookLengthSlider->setValue(parameter[5]);
+  ui->HookCubeXSpinBox->setValue(parameter[6]);
+  ui->HookCubeYSpinBox->setValue(parameter[7]);
+  ui->HookCubeZSpinBox->setValue(parameter[8]);
+  ui->HookRotationSlider->setValue(parameter[9]);
+
+  connect(ui->HookCubeXSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookCubeYSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookCubeZSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+
+  connect(ui->HookHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookLengthSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRadiusDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRotateHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookRotationSlider, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookGuideRadiusDoubleSpinBox, SIGNAL(valueChanged(double)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookSupportHightSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+
+  connect(ui->HookCubeXSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookCubeYSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+  connect(ui->HookCubeZSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(BuildHook()));
+}
+
 void SurfaceFormWidget::OnChangeContourNum(int) { BuildSurface(); }
 
 void SurfaceFormWidget::OnChangeEndPos(int) { BuildSurface(); }
@@ -937,267 +1015,295 @@ void SurfaceFormWidget::OnPickHookPoint() {
 }
 
 void SurfaceFormWidget::BuildHook() {
-  //偏向肘关节一侧定位
-  if (ui->ElbowRadioButton->isChecked()) {
-    //高度
-    double tubehight1 = ui->HookHightSpinBox->value();
-    double hight1 = ui->HookSupportHightSpinBox->value();
 
-    double tubeRadius = ui->HookRadiusSpinBox->value();
+  //高度
+  double tubehight1 = ui->HookHightSpinBox->value();
+  double hight1 = ui->HookSupportHightSpinBox->value();
 
-    double tubehight2 = ui->HookLengthSpinBox->value();
+  double tubeRadius = ui->HookRadiusDoubleSpinBox->value();
 
-    double tubehight4 = ui->HookRotateHightSpinBox->value();
-    //方向
-    double direction1[3];
-    for (int i = 0; i < 3; i++)
+  double guideRadius = ui->HookGuideRadiusDoubleSpinBox->value();
+  double tubehight2 = ui->HookLengthSpinBox->value();
+
+  double tubehight4 = ui->HookRotateHightSpinBox->value();
+  //方向
+  double direction1[3];
+  for (int i = 0; i < 3; i++) {
+    if (ui->ElbowRadioButton->isChecked())
       direction1[i] = m_ElbowHookDirection[i];
-    //开始构建圆柱
+    if (ui->WristRadioButton->isChecked())
+      direction1[i] = m_WristHookDirection[i];
+  }
+  //开始构建圆柱
 
-    // clinder1
-    double center1[3];
-    for (int i = 0; i < 3; i++)
+  // clinder1
+  double center1[3];
+  for (int i = 0; i < 3; i++) {
+    if (ui->ElbowRadioButton->isChecked())
       center1[i] = m_ElbowHookPoint[i] - hight1 * direction1[i];
+    if (ui->WristRadioButton->isChecked())
+      center1[i] = m_WristHookPoint[i] - hight1 * direction1[i];
+  }
 
-    gp_Pnt clinder1center(center1[0], center1[1], center1[2]);
-    gp_Dir clinder1dir(direction1[0], direction1[1], direction1[2]);
-    gp_Ax2 clinder1axs(clinder1center, clinder1dir);
-    TopoDS_Shape clinder1Face =
-        BRepPrimAPI_MakeCylinder(clinder1axs, tubeRadius, tubehight1 + hight1);
+  gp_Pnt clinder1center(center1[0], center1[1], center1[2]);
+  gp_Dir clinder1dir(direction1[0], direction1[1], direction1[2]);
+  gp_Ax2 clinder1axs(clinder1center, clinder1dir);
+  TopoDS_Shape clinder1Face =
+      BRepPrimAPI_MakeCylinder(clinder1axs, tubeRadius, tubehight1 + hight1);
 
-    auto clinder1pd = vtkSmartPointer<vtkPolyData>::New();
-    ConvertTopoDS2PolyData(clinder1Face, clinder1pd);
+  auto clinder1pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(clinder1Face, clinder1pd);
 
-    // clinder2
-    double rotateDegree = ui->HookRotationSlider->value();
-    double direction2[3];
-    vtkMath::Perpendiculars(direction1, direction2, nullptr,
-                            rotateDegree / 180 * vtkMath::Pi());
+  // clinder2
+  double rotateDegree = ui->HookRotationSlider->value();
+  double direction2[3];
+  vtkMath::Perpendiculars(direction1, direction2, nullptr,
+                          rotateDegree / 180 * vtkMath::Pi());
 
-    double center2[3];
-    for (int i = 0; i < 3; i++)
+  double center2[3];
+  for (int i = 0; i < 3; i++) {
+    if (ui->ElbowRadioButton->isChecked())
       center2[i] =
           m_ElbowHookPoint[i] - hight1 * direction1[i] - 5 * direction2[i];
+    if (ui->WristRadioButton->isChecked())
+      center2[i] =
+          m_WristHookPoint[i] - hight1 * direction1[i] - 5 * direction2[i];
+  }
 
-    gp_Pnt clinder2center(center2[0], center2[1], center2[2]);
-    gp_Dir clinder2dir(direction2[0], direction2[1], direction2[2]);
-    gp_Ax2 clinder2axs(clinder2center, clinder2dir);
-    TopoDS_Shape clinder2Face =
-        BRepPrimAPI_MakeCylinder(clinder2axs, tubeRadius, tubehight2 + 10 + 15);
-    // clinder3
-    double center3[3];
-    double direction3[3];
-    for (int i = 0; i < 3; i++) {
-      center3[i] = center2[i] + direction2[i] * 6;
-      direction3[i] = -direction2[i];
-    }
-    gp_Pnt clinder3center(center3[0], center3[1], center3[2]);
-    gp_Dir clinder3dir(direction3[0], direction3[1], direction3[2]);
-    gp_Ax2 clinder3axs(clinder3center, clinder3dir);
-    TopoDS_Shape clinder3Face = BRepPrimAPI_MakeCylinder(
-        clinder3axs, ui->HookGuideRadiusSpinBox->value(), tubehight2 + 6);
+  gp_Pnt clinder2center(center2[0], center2[1], center2[2]);
+  gp_Dir clinder2dir(direction2[0], direction2[1], direction2[2]);
+  gp_Ax2 clinder2axs(clinder2center, clinder2dir);
+  TopoDS_Shape clinder2Face =
+      BRepPrimAPI_MakeCylinder(clinder2axs, tubeRadius, tubehight2 + 10 + 15);
+  // clinder3
+  double center3[3];
+  double direction3[3];
+  for (int i = 0; i < 3; i++) {
+    center3[i] = center2[i] + direction2[i] * 6;
+    direction3[i] = -direction2[i];
+  }
+  gp_Pnt clinder3center(center3[0], center3[1], center3[2]);
+  gp_Dir clinder3dir(direction3[0], direction3[1], direction3[2]);
+  gp_Ax2 clinder3axs(clinder3center, clinder3dir);
+  TopoDS_Shape clinder3Face =
+      BRepPrimAPI_MakeCylinder(clinder3axs, guideRadius, tubehight2 + 6);
 
-    //卡位圆柱
-    double clinderstopCenter[3], clinderstopDirection[3];
-    for (int i = 0; i < 3; i++) {
-      clinderstopCenter[i] = center2[i] + direction2[i] * 5.3;
-      clinderstopDirection[i] = direction2[i];
-    }
-    gp_Pnt clinderstopPnt(clinderstopCenter[0], clinderstopCenter[1],
-                          clinderstopCenter[2]);
-    gp_Dir clinderstopDir(clinderstopDirection[0], clinderstopDirection[1],
-                          clinderstopDirection[2]);
-    gp_Ax2 clinderstopAx(clinderstopPnt, clinderstopDir);
-    TopoDS_Shape clinderstopShape = BRepPrimAPI_MakeCylinder(
-        clinderstopAx, ui->HookGuideRadiusSpinBox->value() + 0.7, 1.7);
+  //卡位圆柱
+  double clinderstopCenter[3], clinderstopDirection[3];
+  for (int i = 0; i < 3; i++) {
+    clinderstopCenter[i] = center2[i] + direction2[i] * 5.3;
+    clinderstopDirection[i] = direction2[i];
+  }
+  gp_Pnt clinderstopPnt(clinderstopCenter[0], clinderstopCenter[1],
+                        clinderstopCenter[2]);
+  gp_Dir clinderstopDir(clinderstopDirection[0], clinderstopDirection[1],
+                        clinderstopDirection[2]);
+  gp_Ax2 clinderstopAx(clinderstopPnt, clinderstopDir);
+  TopoDS_Shape clinderstopShape =
+      BRepPrimAPI_MakeCylinder(clinderstopAx, guideRadius + 0.7, 1.7);
 
-    TopoDS_Shape clinder3Fused;
-    BRepAlgoAPI_Fuse clinder3Fuser(clinder3Face, clinderstopShape);
-    clinder3Fuser.Build();
-    if (!clinder3Fuser.IsDone())
-      return;
-    clinder3Fused = clinder3Fuser.Shape();
+  TopoDS_Shape clinder3Fused;
+  BRepAlgoAPI_Fuse clinder3Fuser(clinder3Face, clinderstopShape);
+  clinder3Fuser.Build();
+  if (!clinder3Fuser.IsDone())
+    return;
+  clinder3Fused = clinder3Fuser.Shape();
 
-    // clinder4
-    double center4[3];
-    double direction4[3];
-    for (int i = 0; i < 3; i++) {
-      center4[i] = center2[i] + direction2[i] * (tubehight2 - tubeRadius);
-      direction4[i] = direction1[i];
-    }
+  // clinder4
+  double center4[3];
+  double direction4[3];
+  for (int i = 0; i < 3; i++) {
+    center4[i] = center2[i] + direction2[i] * (tubehight2 - tubeRadius);
+    direction4[i] = direction1[i];
+  }
 
-    gp_Pnt clinder4center(center4[0], center4[1], center4[2]);
-    gp_Dir clinder4dir(direction4[0], direction4[1], direction4[2]);
-    gp_Ax2 clinder4axs(clinder4center, clinder4dir);
-    TopoDS_Shape clinder4Face =
-        BRepPrimAPI_MakeCylinder(clinder4axs, tubeRadius, tubehight4);
-    auto clinder4pd = vtkSmartPointer<vtkPolyData>::New();
-    ConvertTopoDS2PolyData(clinder4Face, clinder4pd);
+  gp_Pnt clinder4center(center4[0], center4[1], center4[2]);
+  gp_Dir clinder4dir(direction4[0], direction4[1], direction4[2]);
+  gp_Ax2 clinder4axs(clinder4center, clinder4dir);
+  TopoDS_Shape clinder4Face =
+      BRepPrimAPI_MakeCylinder(clinder4axs, tubeRadius, tubehight4);
+  auto clinder4pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(clinder4Face, clinder4pd);
 
-    TopoDS_Shape ClinderFused;
-    BRepAlgoAPI_Fuse clinderFuser1(clinder1Face, clinder2Face);
-    clinderFuser1.Build();
-    if (!clinderFuser1.IsDone())
-      return;
-    ClinderFused = clinderFuser1.Shape();
+  TopoDS_Shape ClinderFused;
+  BRepAlgoAPI_Fuse clinderFuser1(clinder1Face, clinder2Face);
+  clinderFuser1.Build();
+  if (!clinderFuser1.IsDone())
+    return;
+  ClinderFused = clinderFuser1.Shape();
 
-    BRepAlgoAPI_Fuse clinderFuser2(ClinderFused, clinder4Face);
-    clinderFuser2.Build();
-    if (!clinderFuser2.IsDone())
-      return;
-    ClinderFused = clinderFuser2.Shape();
+  BRepAlgoAPI_Fuse clinderFuser2(ClinderFused, clinder4Face);
+  clinderFuser2.Build();
+  if (!clinderFuser2.IsDone())
+    return;
+  ClinderFused = clinderFuser2.Shape();
 
-    // for cut clinder
-    double center4cutClinder[3];
-    for (int i = 0; i < 3; i++)
-      center4cutClinder[i] = center2[i] + 5 * direction2[i];
+  // for cut clinder
+  double center4cutClinder[3];
+  for (int i = 0; i < 3; i++)
+    center4cutClinder[i] = center2[i] + 5 * direction2[i];
 
-    gp_Pnt clinderCutcenter(center4cutClinder[0], center4cutClinder[1],
-                            center4cutClinder[2]);
-    gp_Dir clinderCutdir(direction2[0], direction2[1], direction2[2]);
-    gp_Ax2 clinderCutaxs(clinderCutcenter, clinderCutdir);
-    TopoDS_Shape clinder2cut = BRepPrimAPI_MakeCylinder(
-        clinderCutaxs, ui->HookGuideRadiusSpinBox->value() + 1,
-        tubehight2 + 2 + 15);
+  gp_Pnt clinderCutcenter(center4cutClinder[0], center4cutClinder[1],
+                          center4cutClinder[2]);
+  gp_Dir clinderCutdir(direction2[0], direction2[1], direction2[2]);
+  gp_Ax2 clinderCutaxs(clinderCutcenter, clinderCutdir);
+  TopoDS_Shape clinder2cut = BRepPrimAPI_MakeCylinder(
+      clinderCutaxs, guideRadius + 1, tubehight2 + 2 + 15);
 
-    TopoDS_Shape ClinderCutted;
-    BRepAlgoAPI_Cut cutter1(ClinderFused, clinder2cut);
-    cutter1.Build();
-    if (!cutter1.IsDone())
-      return;
-    ClinderCutted = cutter1.Shape();
+  TopoDS_Shape ClinderCutted;
+  BRepAlgoAPI_Cut cutter1(ClinderFused, clinder2cut);
+  cutter1.Build();
+  if (!cutter1.IsDone())
+    return;
+  ClinderCutted = cutter1.Shape();
 
-    // cutter2
-    double cutClinder2center[3], cutClinder2direction[3];
-    for (int i = 0; i < 3; i++) {
-      cutClinder2center[i] = center2[i] - direction2[i] * 2;
-      cutClinder2direction[i] = direction2[i];
-    }
-    gp_Pnt cutClinder2Pnt(cutClinder2center[0], cutClinder2center[1],
-                          cutClinder2center[2]);
-    gp_Dir cutClinder2Dir(cutClinder2direction[0], cutClinder2direction[1],
-                          cutClinder2direction[2]);
-    gp_Ax2 cutClinder2Ax(cutClinder2Pnt, cutClinder2Dir);
-    TopoDS_Shape cutClinder2Shape = BRepPrimAPI_MakeCylinder(
-        cutClinder2Ax, ui->HookGuideRadiusSpinBox->value() + 0.3, 10);
+  // cutter2
+  double cutClinder2center[3], cutClinder2direction[3];
+  for (int i = 0; i < 3; i++) {
+    cutClinder2center[i] = center2[i] - direction2[i] * 2;
+    cutClinder2direction[i] = direction2[i];
+  }
+  gp_Pnt cutClinder2Pnt(cutClinder2center[0], cutClinder2center[1],
+                        cutClinder2center[2]);
+  gp_Dir cutClinder2Dir(cutClinder2direction[0], cutClinder2direction[1],
+                        cutClinder2direction[2]);
+  gp_Ax2 cutClinder2Ax(cutClinder2Pnt, cutClinder2Dir);
+  TopoDS_Shape cutClinder2Shape =
+      BRepPrimAPI_MakeCylinder(cutClinder2Ax, guideRadius + 0.3, 10);
 
-    TopoDS_Shape cuttedShape2;
-    BRepAlgoAPI_Cut cutter2(ClinderCutted, cutClinder2Shape);
-    cutter2.Build();
-    if (!cutter2.IsDone())
-      return;
-    cuttedShape2 = cutter2.Shape();
+  TopoDS_Shape cuttedShape2;
+  BRepAlgoAPI_Cut cutter2(ClinderCutted, cutClinder2Shape);
+  cutter2.Build();
+  if (!cutter2.IsDone())
+    return;
+  cuttedShape2 = cutter2.Shape();
 
-    double openCubeDirection[3];
-    for (int i = 0; i < 3; i++)
-      openCubeDirection[i] = direction2[i];
-    vtkMath::Normalize(openCubeDirection);
+  double openCubeDirection[3];
+  for (int i = 0; i < 3; i++)
+    openCubeDirection[i] = direction2[i];
+  vtkMath::Normalize(openCubeDirection);
 
-    double openCubexDir[3], openCubeyDir[3];
-    vtkMath::Perpendiculars(openCubeDirection, openCubexDir, openCubeyDir, 0);
+  double openCubexDir[3], openCubeyDir[3];
+  vtkMath::Perpendiculars(openCubeDirection, openCubexDir, openCubeyDir, 0);
 
-    double openCubeDx, openCubeDy, openCubeDz;
-    openCubeDx = ui->HookCubeXSpinBox->value();
-    openCubeDy = ui->HookCubeYSpinBox->value();
-    openCubeDz = ui->HookCubeZSpinBox->value();
+  double openCubeDx, openCubeDy, openCubeDz;
+  openCubeDx = ui->HookCubeXSpinBox->value();
+  openCubeDy = ui->HookCubeYSpinBox->value();
+  openCubeDz = ui->HookCubeZSpinBox->value();
 
-    double centerForOpenCube[3];
-    for (int i = 0; i < 3; i++) {
-      centerForOpenCube[i] = center2[i] - openCubexDir[i] * openCubeDx / 2.0 -
-                             openCubeyDir[i] * openCubeDy / 2.0;
-    }
-    gp_Pnt openCubePnt(centerForOpenCube[0], centerForOpenCube[1],
-                       centerForOpenCube[2]);
+  double centerForOpenCube[3];
+  for (int i = 0; i < 3; i++) {
+    centerForOpenCube[i] = center2[i] - openCubexDir[i] * openCubeDx / 2.0 -
+                           openCubeyDir[i] * openCubeDy / 2.0;
+  }
+  gp_Pnt openCubePnt(centerForOpenCube[0], centerForOpenCube[1],
+                     centerForOpenCube[2]);
 
-    gp_Dir openCubeNDir(openCubeDirection[0], openCubeDirection[1],
-                        openCubeDirection[2]);
-    gp_Dir openCubeVxDir(openCubexDir[0], openCubexDir[1], openCubexDir[2]);
-    gp_Dir openCubeVyDir(openCubeyDir[0], openCubeyDir[1], openCubeyDir[2]);
+  gp_Dir openCubeNDir(openCubeDirection[0], openCubeDirection[1],
+                      openCubeDirection[2]);
+  gp_Dir openCubeVxDir(openCubexDir[0], openCubexDir[1], openCubexDir[2]);
+  gp_Dir openCubeVyDir(openCubeyDir[0], openCubeyDir[1], openCubeyDir[2]);
 
-    gp_Ax2 openCubeAxes(openCubePnt, openCubeNDir);
-    openCubeAxes.SetXDirection(openCubeVxDir);
-    openCubeAxes.SetYDirection(openCubeVyDir);
+  gp_Ax2 openCubeAxes(openCubePnt, openCubeNDir);
+  openCubeAxes.SetXDirection(openCubeVxDir);
+  openCubeAxes.SetYDirection(openCubeVyDir);
 
-    TopoDS_Shape openCubeShape =
-        BRepPrimAPI_MakeBox(openCubeAxes, openCubeDx, openCubeDy, openCubeDz);
+  TopoDS_Shape openCubeShape =
+      BRepPrimAPI_MakeBox(openCubeAxes, openCubeDx, openCubeDy, openCubeDz);
 
-    TopoDS_Shape afterCutCube;
-    BRepAlgoAPI_Cut cubeCutter(cuttedShape2, openCubeShape);
-    cubeCutter.Build();
-    if (!cubeCutter.IsDone())
-      return;
-    afterCutCube = cubeCutter.Shape();
+  TopoDS_Shape afterCutCube;
+  BRepAlgoAPI_Cut cubeCutter(cuttedShape2, openCubeShape);
+  cubeCutter.Build();
+  if (!cubeCutter.IsDone())
+    return;
+  afterCutCube = cubeCutter.Shape();
 
-    // fix cut
-    double cutClinderFixRadius =
-        (openCubeDx > openCubeDy ? openCubeDx : openCubeDy) + 1;
-    double cutClinderFixCenter[3], cutClinderFixDirecton[3];
-    for (int i = 0; i < 3; i++) {
-      cutClinderFixCenter[i] = center2[i] + direction2[i] * openCubeDz / 4;
-      cutClinderFixDirecton[i] = direction2[i];
-    }
-    gp_Pnt cutClinderFixPnt(cutClinderFixCenter[0], cutClinderFixCenter[1],
-                            cutClinderFixCenter[2]);
-    gp_Dir cutClinderFixDir(cutClinderFixDirecton[0], cutClinderFixDirecton[1],
-                            cutClinderFixDirecton[2]);
-    gp_Ax2 cutClinderFixAx(cutClinderFixPnt, cutClinderFixDir);
-    TopoDS_Shape cutClinderFixShape = BRepPrimAPI_MakeCylinder(
-        cutClinderFixAx, cutClinderFixRadius / 2, 3 * openCubeDz / 4.0);
+  // fix cut
+  double cutClinderFixRadius =
+      (openCubeDx > openCubeDy ? openCubeDx : openCubeDy) + 1;
+  double cutClinderFixCenter[3], cutClinderFixDirecton[3];
+  for (int i = 0; i < 3; i++) {
+    cutClinderFixCenter[i] = center2[i] + direction2[i] * openCubeDz / 4;
+    cutClinderFixDirecton[i] = direction2[i];
+  }
+  gp_Pnt cutClinderFixPnt(cutClinderFixCenter[0], cutClinderFixCenter[1],
+                          cutClinderFixCenter[2]);
+  gp_Dir cutClinderFixDir(cutClinderFixDirecton[0], cutClinderFixDirecton[1],
+                          cutClinderFixDirecton[2]);
+  gp_Ax2 cutClinderFixAx(cutClinderFixPnt, cutClinderFixDir);
+  TopoDS_Shape cutClinderFixShape = BRepPrimAPI_MakeCylinder(
+      cutClinderFixAx, cutClinderFixRadius / 2, 3 * openCubeDz / 4.0);
 
-    TopoDS_Shape cutFixShape;
-    BRepAlgoAPI_Cut cutFixCutter(afterCutCube, cutClinderFixShape);
-    cutFixCutter.Build();
-    if (!cutFixCutter.IsDone())
-      return;
-    cutFixShape = cutFixCutter.Shape();
+  TopoDS_Shape cutFixShape;
+  BRepAlgoAPI_Cut cutFixCutter(afterCutCube, cutClinderFixShape);
+  cutFixCutter.Build();
+  if (!cutFixCutter.IsDone())
+    return;
+  cutFixShape = cutFixCutter.Shape();
 
-    auto clinder2pd = vtkSmartPointer<vtkPolyData>::New();
-    ConvertTopoDS2PolyData(cutFixShape, clinder2pd);
+  auto clinder2pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(cutFixShape, clinder2pd);
 
-    // fix on clinder3
-    double cubeOnClinder3Center[3];
-    for (int i = 0; i < 3; i++)
-      cubeOnClinder3Center[i] = centerForOpenCube[i] -
-                                direction2[i] * (tubehight2 - 10) +
-                                openCubexDir[i] * 0.25 + openCubeyDir[i] * 0.25;
+  // fix on clinder3
+  double cubeOnClinder3Center[3];
+  for (int i = 0; i < 3; i++)
+    cubeOnClinder3Center[i] = centerForOpenCube[i] -
+                              direction2[i] * (tubehight2 - 10) +
+                              openCubexDir[i] * 0.25 + openCubeyDir[i] * 0.25;
 
-    gp_Ax2 cubeOnClinder3Ax = openCubeAxes;
-    cubeOnClinder3Ax.SetLocation(gp_Pnt(cubeOnClinder3Center[0],
-                                        cubeOnClinder3Center[1],
-                                        cubeOnClinder3Center[2]));
+  gp_Ax2 cubeOnClinder3Ax = openCubeAxes;
+  cubeOnClinder3Ax.SetLocation(gp_Pnt(cubeOnClinder3Center[0],
+                                      cubeOnClinder3Center[1],
+                                      cubeOnClinder3Center[2]));
 
-    TopoDS_Shape cubeOnClinder3 =
-        BRepPrimAPI_MakeBox(cubeOnClinder3Ax, openCubeDx - 0.5,
-                            openCubeDy - 0.5, openCubeDz / 2 - 0.5);
+  TopoDS_Shape cubeOnClinder3 =
+      BRepPrimAPI_MakeBox(cubeOnClinder3Ax, openCubeDx - 0.5, openCubeDy - 0.5,
+                          openCubeDz / 2 - 0.5);
 
-    // fuse fix on clinder3
-    TopoDS_Shape fusedClinder3WithFix;
-    BRepAlgoAPI_Fuse clinder3FuserWithFix(clinder3Fused, cubeOnClinder3);
-    clinder3FuserWithFix.Build();
-    if (!clinder3FuserWithFix.IsDone())
-      return;
-    fusedClinder3WithFix = clinder3FuserWithFix.Shape();
-    auto clinder3pd = vtkSmartPointer<vtkPolyData>::New();
-    ConvertTopoDS2PolyData(fusedClinder3WithFix, clinder3pd);
-    auto elbowAppender = vtkSmartPointer<vtkAppendPolyData>::New();
-    // elbowAppender->AddInputData(clinder1pd);
-    elbowAppender->AddInputData(clinder2pd);
-    elbowAppender->AddInputData(clinder3pd);
-    //  elbowAppender->AddInputData(clinder4pd);
-    elbowAppender->Update();
+  // fuse fix on clinder3
+  TopoDS_Shape fusedClinder3WithFix;
+  BRepAlgoAPI_Fuse clinder3FuserWithFix(clinder3Fused, cubeOnClinder3);
+  clinder3FuserWithFix.Build();
+  if (!clinder3FuserWithFix.IsDone())
+    return;
+  fusedClinder3WithFix = clinder3FuserWithFix.Shape();
+  auto clinder3pd = vtkSmartPointer<vtkPolyData>::New();
+  ConvertTopoDS2PolyData(fusedClinder3WithFix, clinder3pd);
+  auto Appender = vtkSmartPointer<vtkAppendPolyData>::New();
+  // elbowAppender->AddInputData(clinder1pd);
+  Appender->AddInputData(clinder2pd);
+  Appender->AddInputData(clinder3pd);
+  //  elbowAppender->AddInputData(clinder4pd);
+  Appender->Update();
+  BRepAlgoAPI_Fuse guideFuser(fusedClinder3WithFix, cutFixShape);
+  guideFuser.Build();
+  TopoDS_Shape guideShape;
+  if (!guideFuser.IsDone())
+    return;
+  guideShape = guideFuser.Shape();
 
+  if (ui->ElbowRadioButton->isChecked()) {
+    m_ElbowGuideShape->Shape(guideShape);
     auto clinder1mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    clinder1mapper->SetInputData(elbowAppender->GetOutput());
+    clinder1mapper->SetInputData(Appender->GetOutput());
 
     m_ElbowHookActor->SetMapper(clinder1mapper);
     m_ElbowHookActor->VisibilityOn();
     m_Render->GetRenderWindow()->Render();
-    //结束构建圆柱
-  }
 
-  //偏向腕关节一侧
-  if (ui->WristRadioButton->isChecked()) {
+    SaveParameter(m_ElbowParameter);
   }
+  if (ui->WristRadioButton->isChecked()) {
+    m_WristGuideShape->Shape(guideShape);
+    auto clinder1mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    clinder1mapper->SetInputData(Appender->GetOutput());
+
+    m_WristHookActor->SetMapper(clinder1mapper);
+    m_WristHookActor->VisibilityOn();
+    m_Render->GetRenderWindow()->Render();
+    SaveParameter(m_WristParameter);
+  }
+  //结束构建圆柱
 }
 
 void SurfaceFormWidget::OnHookRotateLeft() {
@@ -1328,6 +1434,19 @@ void SurfaceFormWidget::OnHookMoveRight() {
   }
 }
 
+void SurfaceFormWidget::OnElbowRadioButton() {
+  if (ui->ElbowRadioButton->isChecked())
+    if (!m_ElbowGuideShape->Shape().IsNull())
+      SetParameter(m_ElbowParameter);
+}
+
+void SurfaceFormWidget::OnWristRadioButton() {
+  if (ui->WristRadioButton->isChecked()) {
+    if (!m_WristGuideShape->Shape().IsNull())
+      SetParameter(m_WristParameter);
+  }
+}
+
 void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
   clean->SetInputData(data);
@@ -1339,10 +1458,11 @@ void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   normalFilter->SetInputData(triangleFilter->GetOutput());
   normalFilter->ComputeCellNormalsOn();
   normalFilter->ComputePointNormalsOn();
+  normalFilter->AutoOrientNormalsOn();
   normalFilter->Update();
   auto decim = vtkSmartPointer<vtkDecimatePro>::New();
   decim->SetInputData(normalFilter->GetOutput());
-  decim->SetTargetReduction(0.8);
+  decim->SetTargetReduction(0.7);
   decim->Update();
   m_ForCutData->DeepCopy(decim->GetOutput());
 }

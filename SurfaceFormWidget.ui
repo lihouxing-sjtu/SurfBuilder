@@ -860,22 +860,31 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="HookRadiusSpinBox">
+         <widget class="QDoubleSpinBox" name="HookRadiusDoubleSpinBox">
           <property name="prefix">
-           <string>R: </string>
+           <string>R:</string>
+          </property>
+          <property name="singleStep">
+           <double>0.500000000000000</double>
           </property>
           <property name="value">
-           <number>10</number>
+           <double>3.500000000000000</double>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="HookGuideRadiusSpinBox">
+         <widget class="QDoubleSpinBox" name="HookGuideRadiusDoubleSpinBox">
           <property name="prefix">
-           <string>Guide R: </string>
+           <string>Guide:</string>
+          </property>
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="singleStep">
+           <double>0.500000000000000</double>
           </property>
           <property name="value">
-           <number>2</number>
+           <double>1.500000000000000</double>
           </property>
          </widget>
         </item>

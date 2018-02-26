@@ -95,6 +95,8 @@ protected slots:
 
   void OnStartPickHook();
   void OnEndPickHook();
+
+  void OnAddGuideModel();
 };
 
 #endif // MAINWINDOW_H

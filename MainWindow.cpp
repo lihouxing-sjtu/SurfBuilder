@@ -140,6 +140,9 @@ void MainWindow::CollectionOfConnect() {
 
   connect(m_SurfaceForm, SIGNAL(pickHook()), this, SLOT(OnStartPickHook()));
   connect(ui->ViewWidget, SIGNAL(endHook()), this, SLOT(OnEndPickHook()));
+
+  connect(ui->AddGuideModelButton, SIGNAL(clicked(bool)), this,
+          SLOT(OnAddGuideModel()));
 }
 
 void MainWindow::AddModelItem(ModelItem *item) {
@@ -708,7 +711,7 @@ void MainWindow::OnUpDateHingeButton() {
   TopoDS_Shape withCut = BRepAlgoAPI_Cut(aSolid, cutSolid);
 
   double movingSection[8][3];
-  double deltaMove = 0.5;
+  double deltaMove = 0.2;
   double movingHeight = cutHeight - 2 * deltaMove;
   double movingThickness = ui->MoveThicknessSpinBox->value();
   double moveCrossDirection[3], moveRadialPoint[3];
@@ -1515,10 +1518,37 @@ void MainWindow::OnCombineShape() {
   booleanFuseer2.Build();
   if (!booleanFuseer2.IsDone())
     return;
-
   TopoDS_Shape afterFuse = booleanFuseer2.Shape();
+
+  // with guide
+  TopoDS_Shape guideFuse;
+  BRepAlgoAPI_Fuse guideFuser(m_SurfaceForm->m_ElbowGuideShape->Shape(),
+                              m_SurfaceForm->m_WristGuideShape->Shape());
+  guideFuser.SetRunParallel(1);
+  guideFuser.Build();
+  if (!guideFuser.IsDone())
+    return;
+  guideFuse = guideFuser.Shape();
+  TopoDS_Shape guideCut;
+  BRepAlgoAPI_Cut guideCutter(guideFuse, m_downOffSetDown->Shape());
+  guideCutter.SetRunParallel(1);
+  guideCutter.Build();
+
+  if (!guideCutter.IsDone())
+    return;
+  guideCut = guideCutter.Shape();
+
+  // fuse guide
+  TopoDS_Shape afterGuideFuse;
+  BRepAlgoAPI_Fuse afterGuideFuser(afterFuse, guideCut);
+  afterGuideFuser.SetRunParallel(1);
+  afterGuideFuser.Build();
+  if (!afterGuideFuser.IsDone())
+    return;
+  afterGuideFuse = afterGuideFuser.Shape();
+
   auto pd = vtkSmartPointer<vtkPolyData>::New();
-  this->ConvertTopoDS2PolyData(afterFuse, pd);
+  this->ConvertTopoDS2PolyData(afterGuideFuse, pd);
 
   QTime time = QTime::currentTime();
   QString modelName = "Plate-" + QString::number(time.hour()) + "-" +
@@ -1542,4 +1572,62 @@ void MainWindow::OnEndPickHook() {
   double direction[3];
   m_Render->GetActiveCamera()->GetDirectionOfProjection(direction);
   m_SurfaceForm->SetHookPoint(hookPoint, direction);
+}
+
+void MainWindow::OnAddGuideModel() {
+
+  if (m_SurfaceForm->m_ElbowGuideShape->Shape().IsNull()) {
+    if (m_SurfaceForm->m_WristGuideShape->Shape().IsNull())
+      return; // 都为空
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(m_SurfaceForm->m_WristGuideShape->Shape(), pd);
+    if (pd->GetNumberOfPoints() == 0)
+      return;
+
+    QTime time = QTime::currentTime();
+    QString modelName = "Guide-Wrist" + QString::number(time.hour()) + "-" +
+                        QString::number(time.minute()) + "-" +
+                        QString::number(time.second());
+    ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+    m_ModelList.append(item);
+    item->SetTopoDS_Shape(m_SurfaceForm->m_WristGuideShape->Shape());
+    this->AddModelItem(m_ModelList.last());
+  } else {
+    if (!m_SurfaceForm->m_WristGuideShape->Shape().IsNull()) {
+      BRepAlgoAPI_Fuse guideFuser(m_SurfaceForm->m_ElbowGuideShape->Shape(),
+                                  m_SurfaceForm->m_WristGuideShape->Shape());
+      guideFuser.Build();
+      if (!guideFuser.IsDone())
+        return;
+      TopoDS_Shape guideshape;
+      guideshape = guideFuser.Shape();
+      auto pd = vtkSmartPointer<vtkPolyData>::New();
+      ConvertTopoDS2PolyData(guideshape, pd);
+      if (pd->GetNumberOfPoints() == 0)
+        return;
+
+      QTime time = QTime::currentTime();
+      QString modelName = "Guide-Both" + QString::number(time.hour()) + "-" +
+                          QString::number(time.minute()) + "-" +
+                          QString::number(time.second());
+      ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+      m_ModelList.append(item);
+      item->SetTopoDS_Shape(guideshape);
+      this->AddModelItem(m_ModelList.last());
+      return;
+    }
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
+    ConvertTopoDS2PolyData(m_SurfaceForm->m_ElbowGuideShape->Shape(), pd);
+    if (pd->GetNumberOfPoints() == 0)
+      return;
+
+    QTime time = QTime::currentTime();
+    QString modelName = "Guide-Elbow" + QString::number(time.hour()) + "-" +
+                        QString::number(time.minute()) + "-" +
+                        QString::number(time.second());
+    ModelItem *item = new ModelItem(this, m_Render, modelName, pd);
+    m_ModelList.append(item);
+    item->SetTopoDS_Shape(m_SurfaceForm->m_ElbowGuideShape->Shape());
+    this->AddModelItem(m_ModelList.last());
+  }
 }

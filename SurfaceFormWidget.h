@@ -54,6 +54,9 @@ public:
   Handle(TopoDS_HShape) m_DownBelt3;
   Handle(TopoDS_HShape) m_DownBelt4;
 
+  Handle(TopoDS_HShape) m_ElbowGuideShape;
+  Handle(TopoDS_HShape) m_WristGuideShape;
+
 private:
   Ui::SurfaceFormWidget *ui;
 
@@ -100,6 +103,8 @@ private:
   double m_ElbowHookPoint[3], m_WristHookPoint[3];
   double m_ElbowHookDirection[3], m_WristHookDirection[3];
 
+  double m_ElbowParameter[10], m_WristParameter[10];
+
 protected:
   void ConvertTopoDS2PolyData(TopoDS_Shape input, vtkPolyData *output);
   void GetContourPoints(vtkPolyData *inputData, int sampleNum,
@@ -111,6 +116,8 @@ protected:
   TopoDS_Shape CalculateBeltShape(double uvRegion[], double height,
                                   QDoubleSpinBox *uspin, QDoubleSpinBox *vspin);
   void SetBeltConnet(QDoubleSpinBox *);
+  void SaveParameter(double parameter[]);
+  void SetParameter(double parameter[]);
 signals:
   void pickTwoPoint();
   void canclePick();
@@ -142,6 +149,9 @@ protected slots:
   void OnHookMoveDown();
   void OnHookMoveLeft();
   void OnHookMoveRight();
+
+  void OnElbowRadioButton();
+  void OnWristRadioButton();
 };
 
 #endif // SURFACEFORMWIDGET_H
