@@ -38,6 +38,8 @@ void ModelItem::GetModelName(QString &name) { name = m_ModelName; }
 
 vtkPolyData *ModelItem::GetModelData() { return m_ModelData; }
 
+vtkActor *ModelItem::GetActor() { return m_ModelActor; }
+
 void ModelItem::GetModelData(vtkPolyData *data) { data->DeepCopy(m_ModelData); }
 
 void ModelItem::SetOpacity(int num) {

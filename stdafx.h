@@ -26,14 +26,17 @@ using namespace std;
 #include <vtkCamera.h>
 #include <vtkCardinalSpline.h>
 #include <vtkCleanPolyData.h>
+#include <vtkContourWidget.h>
 #include <vtkCutter.h>
 #include <vtkDecimatePro.h>
+#include <vtkEventQtSlotConnect.h>
 #include <vtkFlyingEdgesPlaneCutter.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkIntersectionPolyDataFilter.h>
 #include <vtkMath.h>
 #include <vtkOrientationMarkerWidget.h>
+#include <vtkOrientedGlyphContourRepresentation.h>
 #include <vtkParametricFunctionSource.h>
 #include <vtkParametricSpline.h>
 #include <vtkPlane.h>
@@ -43,7 +46,9 @@ using namespace std;
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkPolyDataPointPlacer.h>
 #include <vtkPolyDataPointSampler.h>
+#include <vtkPolygonalSurfacePointPlacer.h>
 #include <vtkPropAssembly.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>

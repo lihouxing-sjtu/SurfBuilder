@@ -13,6 +13,7 @@ public:
   QString GetModelName();
   void GetModelName(QString &name);
   vtkPolyData *GetModelData();
+  vtkActor *GetActor();
   void GetModelData(vtkPolyData *data);
   void SetOpacity(int num);
   void SetVisibility(bool vis);

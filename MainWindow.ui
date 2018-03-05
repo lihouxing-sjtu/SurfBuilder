@@ -129,7 +129,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>0.138700000000000</double>
+               <double>-0.627000000000000</double>
               </property>
              </widget>
             </item>
@@ -151,7 +151,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>-0.894400000000000</double>
+               <double>-0.745000000000000</double>
               </property>
              </widget>
             </item>
@@ -163,6 +163,9 @@
               <property name="buttonSymbols">
                <enum>QAbstractSpinBox::NoButtons</enum>
               </property>
+              <property name="decimals">
+               <number>3</number>
+              </property>
               <property name="minimum">
                <double>-10000.000000000000000</double>
               </property>
@@ -170,7 +173,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>-0.430000000000000</double>
+               <double>0.229000000000000</double>
               </property>
              </widget>
             </item>
@@ -259,7 +262,7 @@
                <double>360.000000000000000</double>
               </property>
               <property name="value">
-               <double>280.000000000000000</double>
+               <double>99.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -308,7 +311,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>468.478999999999985</double>
+               <double>-187.877999999999986</double>
               </property>
              </widget>
             </item>
@@ -330,7 +333,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>250.123999999999995</double>
+               <double>223.806999999999988</double>
               </property>
              </widget>
             </item>
@@ -352,7 +355,7 @@
                <double>10000.000000000000000</double>
               </property>
               <property name="value">
-               <double>314.468999999999994</double>
+               <double>-1079.628999999999905</double>
               </property>
              </widget>
             </item>
@@ -482,7 +485,7 @@
                <double>360.000000000000000</double>
               </property>
               <property name="value">
-               <double>121.000000000000000</double>
+               <double>265.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -492,7 +495,7 @@
                <double>360.000000000000000</double>
               </property>
               <property name="value">
-               <double>30.000000000000000</double>
+               <double>60.000000000000000</double>
               </property>
              </widget>
             </item>

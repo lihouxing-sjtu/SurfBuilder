@@ -6,6 +6,7 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   ui->setupUi(this);
   this->setWindowFlag(Qt::WindowStaysOnTopHint);
   m_ForCutData = vtkSmartPointer<vtkPolyData>::New();
+  m_ForCutActor = vtkSmartPointer<vtkActor>::New();
 
   m_Render = vtkSmartPointer<vtkRenderer>::New();
   m_Render = ren;
@@ -93,8 +94,7 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
           SLOT(OnPickTwoPoints()));
   connect(ui->pickCancleButton, SIGNAL(clicked(bool)), this,
           SLOT(OnPickCancle()));
-  connect(ui->ContourNumSpinBox, SIGNAL(valueChanged(int)), this,
-          SLOT(OnChangeContourNum(int)));
+
   connect(ui->EndPositionSlider, SIGNAL(valueChanged(int)), this,
           SLOT(OnChangeEndPos(int)));
   connect(ui->SampleNumSpinBox, SIGNAL(valueChanged(int)), this,
@@ -188,69 +188,37 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   SetBeltConnet(ui->Belt4MaxVDoubleSpinBox);
   SetBeltConnet(ui->Belt4MinUDoubleSpinBox);
   SetBeltConnet(ui->Belt4MinVDoubleSpinBox);
+
+  InitializeContourWidget();
 }
 
 SurfaceFormWidget::~SurfaceFormWidget() { delete ui; }
 void SurfaceFormWidget::BuildSurface() {
-  if (m_Direction[0] == 0 && m_Direction[1] == 0 && m_Direction[2] == 0)
+  if (m_ContourPointsList.size() < 10)
     return;
-  if (m_StartPos[0] == 0 && m_StartPos[1] == 0 && m_StartPos[2] == 0)
-    return;
-  if (m_EndPosp[0] == 0 && m_EndPosp[1] == 0 && m_EndPosp[2] == 0)
-    return;
-
-  qDebug() << "1";
-  int numOfContours = ui->ContourNumSpinBox->value();
+  int numOfContours = 10;
   int numOfSamples = ui->SampleNumSpinBox->value();
-  double _startPos[3], _endPos[3];
-  for (int i = 0; i < 3; i++) {
-    _startPos[i] =
-        m_StartPos[i] + ui->StartPositionSlider->value() * m_Direction[i];
-    _endPos[i] = m_EndPosp[i] + ui->EndPositionSlider->value() * m_Direction[i];
-  }
-  auto appd = vtkSmartPointer<vtkAppendPolyData>::New();
-
   TColgp_Array2OfPnt poles(1, numOfContours, 1, numOfSamples);
-  double totalDistance =
-      sqrt(vtkMath::Distance2BetweenPoints(_startPos, _endPos));
-
-  double singleDistance = totalDistance / (numOfContours - 1);
-  auto cutplane = vtkSmartPointer<vtkPlane>::New();
-  cutplane->SetOrigin(_startPos);
-  cutplane->SetNormal(m_Direction);
   for (int i = 0; i < numOfContours; i++) {
-    if (i > 0)
-      cutplane->Push(singleDistance);
-    auto cutPoints = vtkSmartPointer<vtkPoints>::New();
-    auto contourData = vtkSmartPointer<vtkPolyData>::New();
-    auto out1 = vtkSmartPointer<vtkPolyData>::New();
-    bool isdown = ui->DownRadioButton->isChecked() ? 1 : 0;
-    GetContourPoints(m_ForCutData, numOfSamples, cutplane, cutPoints,
-                     contourData, out1, isdown);
-    auto maper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    maper->SetInputData(out1);
-    auto actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(maper);
-    m_Render->AddActor(actor);
+    auto spline = vtkSmartPointer<vtkParametricSpline>::New();
+    spline->SetPoints(m_ContourPointsList.at(i));
+    spline->SetLeftConstraint(2);
+    spline->SetLeftValue(0);
+    spline->SetRightConstraint(2);
+    spline->SetRightValue(0);
+    spline->ClosedOff();
 
-    if (cutPoints->GetNumberOfPoints() < numOfSamples) {
-      qDebug() << cutPoints->GetNumberOfPoints() << numOfSamples;
-      return;
-    }
+    auto functionSource = vtkSmartPointer<vtkParametricFunctionSource>::New();
+    functionSource->SetParametricFunction(spline);
+    functionSource->SetUResolution(numOfSamples - 1);
+    functionSource->Update();
 
-    appd->AddInputData(contourData);
     for (int j = 0; j < numOfSamples; j++) {
       double pt[3];
-      cutPoints->GetPoint(j, pt);
+      functionSource->GetOutput()->GetPoints()->GetPoint(j, pt);
       poles(i + 1, j + 1) = gp_Pnt(pt[0], pt[1], pt[2]);
     }
   }
-
-  appd->Update();
-  auto mapperContour = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapperContour->SetInputData(appd->GetOutput());
-  m_ContourActor->SetMapper(mapperContour);
-  m_Render->GetRenderWindow()->Render();
 
   Handle_Geom_BezierSurface surf1 = new Geom_BezierSurface(poles);
   if (ui->DownRadioButton->isChecked())
@@ -720,6 +688,101 @@ void SurfaceFormWidget::SetParameter(double parameter[]) {
           SLOT(BuildHook()));
   connect(ui->HookCubeZSpinBox, SIGNAL(valueChanged(int)), this,
           SLOT(BuildHook()));
+}
+
+void SurfaceFormWidget::InitializeContourWidget() {
+  m_VtkQtConnector = vtkSmartPointer<vtkEventQtSlotConnect>::New();
+
+  m_ContourRep = vtkSmartPointer<vtkOrientedGlyphContourRepresentation>::New();
+  m_ContourRep->GetLinesProperty()->SetColor(0, 0, 1);
+  m_ContourRep->GetProperty()->SetColor(0, 1, 0);
+
+  m_ContourPointPlacer = vtkSmartPointer<vtkPolygonalSurfacePointPlacer>::New();
+
+  m_ContourWidget = vtkSmartPointer<vtkContourWidget>::New();
+  m_ContourWidget->SetRepresentation(m_ContourRep);
+  m_ContourWidget->SetInteractor(m_Render->GetRenderWindow()->GetInteractor());
+
+  m_VtkQtConnector->Connect(m_ContourWidget, vtkCommand::EndInteractionEvent,
+                            this, SLOT(OnContourWidgetChanged()));
+}
+
+void SurfaceFormWidget::CutContours() {
+  if (m_Direction[0] == 0 && m_Direction[1] == 0 && m_Direction[2] == 0)
+    return;
+  if (m_StartPos[0] == 0 && m_StartPos[1] == 0 && m_StartPos[2] == 0)
+    return;
+  if (m_EndPosp[0] == 0 && m_EndPosp[1] == 0 && m_EndPosp[2] == 0)
+    return;
+
+  int numOfContours = 10;
+  int numOfSamples = ui->SampleNumSpinBox->value();
+  double _startPos[3], _endPos[3];
+  for (int i = 0; i < 3; i++) {
+    _startPos[i] =
+        m_StartPos[i] + ui->StartPositionSlider->value() * m_Direction[i];
+    _endPos[i] = m_EndPosp[i] + ui->EndPositionSlider->value() * m_Direction[i];
+  }
+
+  m_ContourPointsList.clear();
+
+  double totalDistance =
+      sqrt(vtkMath::Distance2BetweenPoints(_startPos, _endPos));
+
+  double singleDistance = totalDistance / (numOfContours - 1);
+  auto cutplane = vtkSmartPointer<vtkPlane>::New();
+  cutplane->SetOrigin(_startPos);
+  cutplane->SetNormal(m_Direction);
+
+  auto appd = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (int i = 0; i < numOfContours; i++) {
+    if (i > 0)
+      cutplane->Push(singleDistance);
+    auto cutPoints = vtkSmartPointer<vtkPoints>::New();
+    auto contourData = vtkSmartPointer<vtkPolyData>::New();
+    auto out1 = vtkSmartPointer<vtkPolyData>::New();
+    bool isdown = ui->DownRadioButton->isChecked() ? 1 : 0;
+    GetContourPoints(m_ForCutData, numOfSamples, cutplane, cutPoints,
+                     contourData, out1, isdown);
+
+    int numOfNodes = 5;
+    int singleLenth = cutPoints->GetNumberOfPoints() / numOfNodes;
+    auto contourPoints = vtkSmartPointer<vtkPoints>::New();
+    contourPoints->Initialize();
+
+    for (int j = 0; j < cutPoints->GetNumberOfPoints(); j = j + singleLenth) {
+      double pt[3];
+      cutPoints->GetPoint(j, pt);
+      contourPoints->InsertNextPoint(pt);
+    }
+
+    m_ContourPointsList.append(contourPoints);
+    appd->AddInputData(contourData);
+  }
+  appd->Update();
+  qDebug() << m_ContourPointsList.first()->GetNumberOfPoints();
+  auto forContourPd = vtkSmartPointer<vtkPolyData>::New();
+  forContourPd->SetPoints(m_ContourPointsList.first());
+  auto cell = vtkSmartPointer<vtkCellArray>::New();
+  cell->Initialize();
+  auto idlist = vtkSmartPointer<vtkIdList>::New();
+  idlist->Initialize();
+  for (int i = 0; i < m_ContourPointsList.first()->GetNumberOfPoints(); i++) {
+    idlist->InsertNextId(i);
+  }
+  cell->InsertNextCell(idlist);
+  forContourPd->SetPoints(m_ContourPointsList.first());
+  forContourPd->SetLines(cell);
+
+  m_ContourWidget->SetWidgetState(vtkContourWidget::Manipulate);
+  m_ContourWidget->On();
+  m_ContourWidget->Initialize(forContourPd);
+
+  auto mapperContour = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapperContour->SetInputData(appd->GetOutput());
+  m_ContourActor->SetMapper(mapperContour);
+  m_Render->GetRenderWindow()->Render();
 }
 
 void SurfaceFormWidget::OnChangeContourNum(int) { BuildSurface(); }
@@ -1447,7 +1510,25 @@ void SurfaceFormWidget::OnWristRadioButton() {
   }
 }
 
-void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
+void SurfaceFormWidget::OnContourWidgetChanged() {
+  if (m_ContourPointsList.size() < 10)
+    return;
+  // int changedContour = ui->ContourSpinBox->value();
+
+  //  auto points = vtkSmartPointer<vtkPoints>::New();
+  //  points = m_ContourWidget->GetContourRepresentation()
+  //               ->GetContourRepresentationAsPolyData()
+  //               ->GetPoints();
+
+  //  m_ContourPointsList.at(changedContour)->DeepCopy(points);
+}
+
+void SurfaceFormWidget::SetCutData(vtkPolyData *data, vtkActor *actor) {
+  m_ForCutActor = actor;
+
+  m_ContourPointPlacer->AddProp(actor);
+  m_ContourRep->SetPointPlacer(m_ContourPointPlacer);
+
   auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
   clean->SetInputData(data);
   clean->Update();
@@ -1460,11 +1541,11 @@ void SurfaceFormWidget::SetCutData(vtkPolyData *data) {
   normalFilter->ComputePointNormalsOn();
   normalFilter->AutoOrientNormalsOn();
   normalFilter->Update();
-  auto decim = vtkSmartPointer<vtkDecimatePro>::New();
-  decim->SetInputData(normalFilter->GetOutput());
-  decim->SetTargetReduction(0.7);
-  decim->Update();
-  m_ForCutData->DeepCopy(decim->GetOutput());
+  //  auto decim = vtkSmartPointer<vtkDecimatePro>::New();
+  //  decim->SetInputData(normalFilter->GetOutput());
+  //  decim->SetTargetReduction(0.7);
+  //  decim->Update();
+  m_ForCutData->DeepCopy(normalFilter->GetOutput());
 }
 
 void SurfaceFormWidget::SetDirection(double *updir, double *downdir) {
@@ -1489,7 +1570,7 @@ void SurfaceFormWidget::SetDirection(double *updir, double *downdir) {
 void SurfaceFormWidget::SetEndPos(double *pos) {
   for (int i = 0; i < 3; i++)
     m_EndPosp[i] = pos[i];
-  BuildSurface();
+  CutContours();
 }
 
 void SurfaceFormWidget::SetStartPos(double *pos) {

@@ -15,7 +15,7 @@ public:
   ~SurfaceFormWidget();
 
 public:
-  void SetCutData(vtkPolyData *data);
+  void SetCutData(vtkPolyData *data, vtkActor *actor);
   void SetDirection(double *updir, double *downdir);
   void SetEndPos(double *pos);
   void SetStartPos(double *pos);
@@ -62,6 +62,7 @@ private:
 
   // data for cut
   vtkSmartPointer<vtkPolyData> m_ForCutData;
+  vtkSmartPointer<vtkActor> m_ForCutActor;
   vtkSmartPointer<vtkRenderer> m_Render;
   vtkSmartPointer<vtkActor> m_ContourActor;
   vtkSmartPointer<vtkActor> m_SurfaceActor;
@@ -74,7 +75,8 @@ private:
 
   vtkSmartPointer<vtkActor> m_ElbowHookActor;
   vtkSmartPointer<vtkActor> m_WristHookActor;
-
+  vtkSmartPointer<vtkOrientedGlyphContourRepresentation> m_ContourRep;
+  vtkSmartPointer<vtkPolygonalSurfacePointPlacer> m_ContourPointPlacer;
   double m_Direction[3];
   double m_StartPos[3];
   double m_EndPosp[3];
@@ -104,6 +106,10 @@ private:
   double m_ElbowHookDirection[3], m_WristHookDirection[3];
 
   double m_ElbowParameter[10], m_WristParameter[10];
+  QList<vtkSmartPointer<vtkPoints>> m_ContourPointsList;
+
+  vtkSmartPointer<vtkContourWidget> m_ContourWidget;
+  vtkSmartPointer<vtkEventQtSlotConnect> m_VtkQtConnector;
 
 protected:
   void ConvertTopoDS2PolyData(TopoDS_Shape input, vtkPolyData *output);
@@ -118,10 +124,13 @@ protected:
   void SetBeltConnet(QDoubleSpinBox *);
   void SaveParameter(double parameter[]);
   void SetParameter(double parameter[]);
+  void InitializeContourWidget();
+  void CutContours();
 signals:
   void pickTwoPoint();
   void canclePick();
   void pickHook();
+
 protected slots:
   void BuildSurface();
   void OnChangeContourNum(int);
@@ -152,6 +161,8 @@ protected slots:
 
   void OnElbowRadioButton();
   void OnWristRadioButton();
+
+  void OnContourWidgetChanged();
 };
 
 #endif // SURFACEFORMWIDGET_H

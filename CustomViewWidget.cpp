@@ -13,7 +13,8 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_TrackBall = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
 
   m_RenderWin->AddRenderer(m_RenderRen);
-  m_RenderWin->SetInteractor(m_Interactor);
+  // m_RenderWin->SetInteractor(m_Interactor);
+  m_Interactor->SetRenderWindow(m_RenderWin);
   m_Interactor->SetInteractorStyle(m_TrackBall);
   m_Interactor->RemoveObservers(qPrintable("RightButtonPressEvent"));
   m_AnnotatedCube = vtkSmartPointer<vtkAnnotatedCubeActor>::New();
@@ -28,6 +29,7 @@ CustomViewWidget::CustomViewWidget(QWidget *parent)
   m_OrientationMarker->EnabledOn();
   m_OrientationMarker->InteractiveOff();
   this->SetRenderWindow(m_RenderWin);
+
   m_Interactor->Initialize();
   this->setMouseTracking(false);
   m_pickedPoints = vtkSmartPointer<vtkPoints>::New();
@@ -110,15 +112,15 @@ void CustomViewWidget::SetPickHook() {
   this->setCursor(Qt::CrossCursor);
 }
 
-void CustomViewWidget::resizeEvent(QResizeEvent *event) {
-  int height = this->height();
-  int button1Width = ui->BackGround1Button->width();
-  int button1Height = ui->BackGround1Button->height();
-  ui->BackGround1Button->setGeometry(10, height - button1Height - 20,
-                                     button1Width, button1Height);
-  ui->BackGround2Button->setGeometry(10, 20, button1Width, button1Height);
-  QWidget::resizeEvent(event);
-}
+// void CustomViewWidget::resizeEvent(QResizeEvent *event) {
+//  int height = this->height();
+//  int button1Width = ui->BackGround1Button->width();
+//  int button1Height = ui->BackGround1Button->height();
+//  ui->BackGround1Button->setGeometry(10, height - button1Height - 20,
+//                                     button1Width, button1Height);
+//  ui->BackGround2Button->setGeometry(10, 20, button1Width, button1Height);
+//  QWidget::resizeEvent(event);
+//}
 
 void CustomViewWidget::SetButtonColor(QPushButton *button, double color[]) {
   QString commonStyle = "border-color: rgb(241, 241, "
@@ -227,18 +229,22 @@ void CustomViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 
 void CustomViewWidget::keyPressEvent(QKeyEvent *event) {
   if (m_keyState != Nokey) {
-    QWidget::keyPressEvent(event);
+    QVTKWidget::keyPressEvent(event);
     return;
   }
-  if (event->key() == Qt::Key_F1)
+  if (event->key() == Qt::Key_F1) {
     m_keyState = F1;
+    event->accept();
+  }
   QVTKWidget::keyPressEvent(event);
 }
 
 void CustomViewWidget::keyReleaseEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_F1) {
     m_keyState = Nokey;
-    QWidget::keyReleaseEvent(event);
+    event->accept();
+    return;
+    QVTKWidget::keyReleaseEvent(event);
   }
   QVTKWidget::keyReleaseEvent(event);
 }

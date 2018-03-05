@@ -50,7 +50,7 @@ private:
   QList<vtkActor *> m_pickSpheres;
 
 protected:
-  virtual void resizeEvent(QResizeEvent *event);
+  // virtual void resizeEvent(QResizeEvent *event);
   void SetButtonColor(QPushButton *, double color[]);
   void CollectionOfConnect();
   void GetPickPoint(double inputpt[2], double outputpt[3]);

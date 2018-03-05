@@ -855,7 +855,8 @@ void MainWindow::OnUpDateHingeButton() {
 }
 
 void MainWindow::OnSurfaceForm() {
-  m_SurfaceForm->SetCutData(m_ModelList.at(m_SelectItemIndex)->GetModelData());
+  m_SurfaceForm->SetCutData(m_ModelList.at(m_SelectItemIndex)->GetModelData(),
+                            m_ModelList.at(m_SelectItemIndex)->GetActor());
   m_SurfaceForm->show();
   m_SurfaceForm->SetDirection(m_UpDirection, m_DownDirection);
 }
