@@ -42,10 +42,13 @@
         <string>Contour:</string>
        </property>
        <property name="minimum">
-        <number>3</number>
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>9</number>
        </property>
        <property name="value">
-        <number>10</number>
+        <number>0</number>
        </property>
       </widget>
      </item>
@@ -66,6 +69,13 @@
       <widget class="QPushButton" name="pickCancleButton">
        <property name="text">
         <string>cancle</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="SurfaceVisibilityButton">
+       <property name="text">
+        <string>Visibility</string>
        </property>
       </widget>
      </item>
@@ -115,13 +125,6 @@
       </widget>
      </item>
     </layout>
-   </item>
-   <item row="2" column="0">
-    <widget class="QPushButton" name="ApplyButton">
-     <property name="text">
-      <string>Apply</string>
-     </property>
-    </widget>
    </item>
    <item row="3" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1080,6 +1083,13 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QPushButton" name="ApplyButton">
+     <property name="text">
+      <string>Apply</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

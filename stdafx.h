@@ -31,6 +31,7 @@ using namespace std;
 #include <vtkDecimatePro.h>
 #include <vtkEventQtSlotConnect.h>
 #include <vtkFlyingEdgesPlaneCutter.h>
+#include <vtkFollower.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkIntersectionPolyDataFilter.h>
@@ -67,6 +68,7 @@ using namespace std;
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkVectorText.h>
 // occt include
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>

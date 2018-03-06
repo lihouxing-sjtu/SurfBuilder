@@ -110,6 +110,7 @@ private:
 
   vtkSmartPointer<vtkContourWidget> m_ContourWidget;
   vtkSmartPointer<vtkEventQtSlotConnect> m_VtkQtConnector;
+  vtkSmartPointer<vtkFollower> m_ContourLabelFollower;
 
 protected:
   void ConvertTopoDS2PolyData(TopoDS_Shape input, vtkPolyData *output);
@@ -161,7 +162,7 @@ protected slots:
 
   void OnElbowRadioButton();
   void OnWristRadioButton();
-
+  void OnContourSpinboxChanged();
   void OnContourWidgetChanged();
 };
 

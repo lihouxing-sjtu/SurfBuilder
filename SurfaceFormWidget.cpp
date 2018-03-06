@@ -190,6 +190,9 @@ SurfaceFormWidget::SurfaceFormWidget(QWidget *parent, vtkRenderer *ren)
   SetBeltConnet(ui->Belt4MinVDoubleSpinBox);
 
   InitializeContourWidget();
+  connect(ui->ContourSpinBox, SIGNAL(valueChanged(int)), this,
+          SLOT(OnContourSpinboxChanged()));
+  connect(ui->ApplyButton, SIGNAL(clicked(bool)), this, SLOT(BuildSurface()));
 }
 
 SurfaceFormWidget::~SurfaceFormWidget() { delete ui; }
@@ -226,6 +229,7 @@ void SurfaceFormWidget::BuildSurface() {
   else
     m_GeomSurfaceUp = surf1;
   TopoDS_Face aFace = BRepBuilderAPI_MakeFace(surf1, 1e-6).Face();
+  aFace.Reverse();
   m_DownHingeSurface->Shape(aFace);
 
   if (ui->DownRadioButton->isChecked()) {
@@ -261,17 +265,18 @@ void SurfaceFormWidget::BuildSurface() {
   if (ui->UpRadioButton->isChecked()) {
     // offset DOWN
     BRepOffset_MakeSimpleOffset myOffsetAlgo(
-        aFace, 10 * ui->OffSetDoubleSpinBox->value());
+        aFace, -10 * ui->OffSetDoubleSpinBox->value());
     myOffsetAlgo.SetBuildSolidFlag(Standard_True);
     myOffsetAlgo.Perform();
     TopoDS_Shape downFace = myOffsetAlgo.GetResultShape();
-    downFace.Reverse();
+    // downFace.Reverse();
     // offset UP
     BRepOffset_MakeSimpleOffset offsetdown(aFace,
-                                           -ui->OffSetDoubleSpinBox->value());
+                                           ui->OffSetDoubleSpinBox->value());
     offsetdown.SetBuildSolidFlag(Standard_True);
     offsetdown.Perform();
     TopoDS_Shape offsetface = offsetdown.GetResultShape();
+    offsetface.Reverse();
     m_UpOffSetUp->Shape(offsetface);
     m_UpOffSetDown->Shape(downFace);
 
@@ -692,6 +697,18 @@ void SurfaceFormWidget::SetParameter(double parameter[]) {
 
 void SurfaceFormWidget::InitializeContourWidget() {
   m_VtkQtConnector = vtkSmartPointer<vtkEventQtSlotConnect>::New();
+  m_ContourLabelFollower = vtkSmartPointer<vtkFollower>::New();
+  auto label = vtkSmartPointer<vtkVectorText>::New();
+  label->SetText("F");
+
+  label->Update();
+  auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(label->GetOutput());
+  m_ContourLabelFollower->SetMapper(mapper);
+  m_ContourLabelFollower->GetProperty()->SetColor(1, 0, 0);
+  m_ContourLabelFollower->SetScale(5, 5, 5);
+  m_ContourLabelFollower->VisibilityOff();
+  m_Render->AddActor(m_ContourLabelFollower);
 
   m_ContourRep = vtkSmartPointer<vtkOrientedGlyphContourRepresentation>::New();
   m_ContourRep->GetLinesProperty()->SetColor(0, 0, 1);
@@ -1211,7 +1228,7 @@ void SurfaceFormWidget::BuildHook() {
   gp_Dir clinderCutdir(direction2[0], direction2[1], direction2[2]);
   gp_Ax2 clinderCutaxs(clinderCutcenter, clinderCutdir);
   TopoDS_Shape clinder2cut = BRepPrimAPI_MakeCylinder(
-      clinderCutaxs, guideRadius + 1, tubehight2 + 2 + 15);
+      clinderCutaxs, guideRadius + 2, tubehight2 + 2 + 15);
 
   TopoDS_Shape ClinderCutted;
   BRepAlgoAPI_Cut cutter1(ClinderFused, clinder2cut);
@@ -1510,17 +1527,45 @@ void SurfaceFormWidget::OnWristRadioButton() {
   }
 }
 
+void SurfaceFormWidget::OnContourSpinboxChanged() {
+  int indexOfCoutour = ui->ContourSpinBox->value();
+  auto forContourPd = vtkSmartPointer<vtkPolyData>::New();
+  auto cell = vtkSmartPointer<vtkCellArray>::New();
+  cell->Initialize();
+  auto idlist = vtkSmartPointer<vtkIdList>::New();
+  idlist->Initialize();
+  for (int i = 0;
+       i < m_ContourPointsList.at(indexOfCoutour)->GetNumberOfPoints(); i++) {
+    idlist->InsertNextId(i);
+  }
+  cell->InsertNextCell(idlist);
+  forContourPd->SetPoints(m_ContourPointsList.at(indexOfCoutour));
+  forContourPd->SetLines(cell);
+  double firstPt[3];
+  m_ContourPointsList.at(indexOfCoutour)->GetPoint(0, firstPt);
+  m_ContourLabelFollower->VisibilityOn();
+  m_ContourLabelFollower->SetPosition(firstPt);
+
+  m_ContourWidget->SetWidgetState(vtkContourWidget::Manipulate);
+  m_ContourWidget->On();
+  m_ContourWidget->Initialize(forContourPd);
+  m_Render->GetRenderWindow()->Render();
+}
+
 void SurfaceFormWidget::OnContourWidgetChanged() {
   if (m_ContourPointsList.size() < 10)
     return;
-  // int changedContour = ui->ContourSpinBox->value();
-
-  //  auto points = vtkSmartPointer<vtkPoints>::New();
-  //  points = m_ContourWidget->GetContourRepresentation()
-  //               ->GetContourRepresentationAsPolyData()
-  //               ->GetPoints();
-
-  //  m_ContourPointsList.at(changedContour)->DeepCopy(points);
+  double firstPt[3];
+  auto nodeData = vtkSmartPointer<vtkPolyData>::New();
+  m_ContourRep->GetNodePolyData(nodeData);
+  auto points = vtkSmartPointer<vtkPoints>::New();
+  points = nodeData->GetPoints();
+  points->GetPoint(0, firstPt);
+  m_ContourLabelFollower->VisibilityOn();
+  m_ContourLabelFollower->SetPosition(firstPt);
+  m_Render->GetRenderWindow()->Render();
+  int changedContour = ui->ContourSpinBox->value();
+  m_ContourPointsList.at(changedContour)->DeepCopy(points);
 }
 
 void SurfaceFormWidget::SetCutData(vtkPolyData *data, vtkActor *actor) {
